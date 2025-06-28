@@ -170,7 +170,3 @@ The platform is optimized for the Bambu Lab A1 printer with these specifications
 - File API support for local file loading
 - ES2020+ JavaScript features used
 
-## 📄 License
-
-This project is built with Lovable and follows their terms of service.
-
