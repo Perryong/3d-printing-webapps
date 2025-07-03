@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Move, RotateCw, Scale, Copy, Trash2, RotateCcw } from 'lucide-react';
 
@@ -39,6 +40,30 @@ const ModelTransformControls: React.FC<ModelTransformControlsProps> = ({
       </div>
     );
   }
+
+  // Safe conversion from radians to degrees with fallback values
+  const safeRotationToDegrees = (radians: number): number => {
+    if (typeof radians !== 'number' || isNaN(radians)) {
+      return 0;
+    }
+    return radians * 180 / Math.PI;
+  };
+
+  // Safe conversion from degrees to radians
+  const safeDegreesToRadians = (degrees: number): number => {
+    if (typeof degrees !== 'number' || isNaN(degrees)) {
+      return 0;
+    }
+    return degrees * Math.PI / 180;
+  };
+
+  // Safe number formatting with fallback
+  const safeToFixed = (value: number, decimals: number): string => {
+    if (typeof value !== 'number' || isNaN(value)) {
+      return '0.0';
+    }
+    return value.toFixed(decimals);
+  };
 
   return (
     <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 space-y-4">
@@ -90,7 +115,7 @@ const ModelTransformControls: React.FC<ModelTransformControlsProps> = ({
             <label className="block text-xs text-gray-400 mb-1">X</label>
             <input
               type="number"
-              value={position.x.toFixed(1)}
+              value={safeToFixed(position.x, 1)}
               onChange={(e) => onPositionChange('x', parseFloat(e.target.value) || 0)}
               className="w-full px-2 py-1 bg-gray-700 text-white rounded text-sm"
               step="0.1"
@@ -100,7 +125,7 @@ const ModelTransformControls: React.FC<ModelTransformControlsProps> = ({
             <label className="block text-xs text-gray-400 mb-1">Y</label>
             <input
               type="number"
-              value={position.z.toFixed(1)}
+              value={safeToFixed(position.z, 1)}
               onChange={(e) => onPositionChange('z', parseFloat(e.target.value) || 0)}
               className="w-full px-2 py-1 bg-gray-700 text-white rounded text-sm"
               step="0.1"
@@ -110,7 +135,7 @@ const ModelTransformControls: React.FC<ModelTransformControlsProps> = ({
             <label className="block text-xs text-gray-400 mb-1">Z</label>
             <input
               type="number"
-              value={position.y.toFixed(1)}
+              value={safeToFixed(position.y, 1)}
               onChange={(e) => onPositionChange('y', parseFloat(e.target.value) || 0)}
               className="w-full px-2 py-1 bg-gray-700 text-white rounded text-sm"
               step="0.1"
@@ -128,8 +153,8 @@ const ModelTransformControls: React.FC<ModelTransformControlsProps> = ({
             <label className="block text-xs text-gray-400 mb-1">X</label>
             <input
               type="number"
-              value={(rotation.x * 180 / Math.PI).toFixed(1)}
-              onChange={(e) => onRotationChange('x', (parseFloat(e.target.value) || 0) * Math.PI / 180)}
+              value={safeToFixed(safeRotationToDegrees(rotation.x), 1)}
+              onChange={(e) => onRotationChange('x', safeDegreesToRadians(parseFloat(e.target.value) || 0))}
               className="w-full px-2 py-1 bg-gray-700 text-white rounded text-sm"
               step="1"
               placeholder="-90.0"
@@ -139,8 +164,8 @@ const ModelTransformControls: React.FC<ModelTransformControlsProps> = ({
             <label className="block text-xs text-gray-400 mb-1">Y</label>
             <input
               type="number"
-              value={(rotation.y * 180 / Math.PI).toFixed(1)}
-              onChange={(e) => onRotationChange('y', (parseFloat(e.target.value) || 0) * Math.PI / 180)}
+              value={safeToFixed(safeRotationToDegrees(rotation.y), 1)}
+              onChange={(e) => onRotationChange('y', safeDegreesToRadians(parseFloat(e.target.value) || 0))}
               className="w-full px-2 py-1 bg-gray-700 text-white rounded text-sm"
               step="1"
             />
@@ -149,8 +174,8 @@ const ModelTransformControls: React.FC<ModelTransformControlsProps> = ({
             <label className="block text-xs text-gray-400 mb-1">Z</label>
             <input
               type="number"
-              value={(rotation.z * 180 / Math.PI).toFixed(1)}
-              onChange={(e) => onRotationChange('z', (parseFloat(e.target.value) || 0) * Math.PI / 180)}
+              value={safeToFixed(safeRotationToDegrees(rotation.z), 1)}
+              onChange={(e) => onRotationChange('z', safeDegreesToRadians(parseFloat(e.target.value) || 0))}
               className="w-full px-2 py-1 bg-gray-700 text-white rounded text-sm"
               step="1"
             />
@@ -166,7 +191,7 @@ const ModelTransformControls: React.FC<ModelTransformControlsProps> = ({
             <label className="block text-xs text-gray-400 mb-1">X</label>
             <input
               type="number"
-              value={scale.x.toFixed(2)}
+              value={safeToFixed(scale.x, 2)}
               onChange={(e) => onScaleChange('x', parseFloat(e.target.value) || 1)}
               className="w-full px-2 py-1 bg-gray-700 text-white rounded text-sm"
               step="0.1"
@@ -177,7 +202,7 @@ const ModelTransformControls: React.FC<ModelTransformControlsProps> = ({
             <label className="block text-xs text-gray-400 mb-1">Y</label>
             <input
               type="number"
-              value={scale.y.toFixed(2)}
+              value={safeToFixed(scale.y, 2)}
               onChange={(e) => onScaleChange('y', parseFloat(e.target.value) || 1)}
               className="w-full px-2 py-1 bg-gray-700 text-white rounded text-sm"
               step="0.1"
@@ -188,7 +213,7 @@ const ModelTransformControls: React.FC<ModelTransformControlsProps> = ({
             <label className="block text-xs text-gray-400 mb-1">Z</label>
             <input
               type="number"
-              value={scale.z.toFixed(2)}
+              value={safeToFixed(scale.z, 2)}
               onChange={(e) => onScaleChange('z', parseFloat(e.target.value) || 1)}
               className="w-full px-2 py-1 bg-gray-700 text-white rounded text-sm"
               step="0.1"

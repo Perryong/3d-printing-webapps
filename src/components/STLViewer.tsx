@@ -249,11 +249,11 @@ const STLViewer: React.FC = () => {
   const handleModelReset = useCallback(() => {
     if (selectedModelId && modelManagerRef.current) {
       modelManagerRef.current.resetModelTransform(selectedModelId);
-      // Update the models state to trigger re-render of transform controls
+      // Update the models state with the reset transform
       const updatedModel = modelManagerRef.current.getSelectedModel();
       if (updatedModel) {
         setModels(prev => prev.map(m => 
-          m.id === selectedModelId ? updatedModel : m
+          m.id === selectedModelId ? { ...m, transform: updatedModel.transform } : m
         ));
       }
     }
@@ -265,27 +265,25 @@ const STLViewer: React.FC = () => {
     type: 'position' | 'rotation' | 'scale'
   ) => {
     if (selectedModelId && modelManagerRef.current) {
-      const selectedModel = models.find(m => m.id === selectedModelId);
-      if (selectedModel) {
-        const transform: any = {};
-        transform[type] = {
-          ...selectedModel.mesh[type],
-          [axis]: value
-        };
-        modelManagerRef.current.updateModelTransform(selectedModelId, transform);
-        
-        // Update the model in state to reflect the change
-        setModels(prev => prev.map(m => {
-          if (m.id === selectedModelId) {
-            const updatedMesh = { ...m.mesh };
-            updatedMesh[type] = { ...updatedMesh[type], [axis]: value };
-            return { ...m, mesh: updatedMesh };
-          }
-          return m;
-        }));
-      }
+      // Update the model manager
+      modelManagerRef.current.updateModelProperty(selectedModelId, type, axis, value);
+      
+      // Update the local state
+      setModels(prev => prev.map(m => {
+        if (m.id === selectedModelId) {
+          const updatedTransform = {
+            ...m.transform,
+            [type]: {
+              ...m.transform[type],
+              [axis]: value
+            }
+          };
+          return { ...m, transform: updatedTransform };
+        }
+        return m;
+      }));
     }
-  }, [selectedModelId, models]);
+  }, [selectedModelId]);
 
   // Camera controls updated for bottom-positioned grid
   const resetCamera = useCallback(() => {
@@ -495,9 +493,9 @@ const STLViewer: React.FC = () => {
               onDuplicate={handleModelDuplicate}
               onDelete={handleModelDelete}
               onReset={handleModelReset}
-              position={selectedModel ? selectedModel.mesh.position : { x: 0, y: 0, z: 0 }}
-              rotation={selectedModel ? selectedModel.mesh.rotation : { x: 0, y: 0, z: 0 }}
-              scale={selectedModel ? selectedModel.mesh.scale : { x: 1, y: 1, z: 1 }}
+              position={selectedModel ? selectedModel.transform.position : { x: 0, y: 0, z: 0 }}
+              rotation={selectedModel ? selectedModel.transform.rotation : { x: -Math.PI / 2, y: 0, z: 0 }}
+              scale={selectedModel ? selectedModel.transform.scale : { x: 1, y: 1, z: 1 }}
               onPositionChange={(axis, value) => handleModelTransformChange(axis, value, 'position')}
               onRotationChange={(axis, value) => handleModelTransformChange(axis, value, 'rotation')}
               onScaleChange={(axis, value) => handleModelTransformChange(axis, value, 'scale')}
@@ -521,6 +519,7 @@ const STLViewer: React.FC = () => {
             <PrintTimeDisplay
               estimate={printTimeEstimate}
               slicingMethod={slicingMethod}
+              modelVolume={getModelVolume()}
             />
             <ViewerDisplay
               slicingMethod={slicingMethod}

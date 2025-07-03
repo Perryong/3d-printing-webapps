@@ -1,5 +1,11 @@
 import * as THREE from 'three';
 
+export interface ModelTransform {
+  position: { x: number; y: number; z: number };
+  rotation: { x: number; y: number; z: number };
+  scale: { x: number; y: number; z: number };
+}
+
 export interface ModelData {
   id: string;
   name: string;
@@ -7,6 +13,7 @@ export interface ModelData {
   visible: boolean;
   locked: boolean;
   originalGeometry: THREE.BufferGeometry;
+  transform: ModelTransform;
 }
 
 export class ModelManager {
@@ -32,6 +39,20 @@ export class ModelManager {
     this.renderer.domElement.addEventListener('mousemove', this.onMouseMove.bind(this));
     this.renderer.domElement.addEventListener('mouseup', this.onMouseUp.bind(this));
     this.renderer.domElement.addEventListener('click', this.onMouseClick.bind(this));
+  }
+
+  private meshToTransform(mesh: THREE.Mesh): ModelTransform {
+    return {
+      position: { x: mesh.position.x, y: mesh.position.y, z: mesh.position.z },
+      rotation: { x: mesh.rotation.x, y: mesh.rotation.y, z: mesh.rotation.z },
+      scale: { x: mesh.scale.x, y: mesh.scale.y, z: mesh.scale.z }
+    };
+  }
+
+  private updateMeshFromTransform(mesh: THREE.Mesh, transform: ModelTransform): void {
+    mesh.position.set(transform.position.x, transform.position.y, transform.position.z);
+    mesh.rotation.set(transform.rotation.x, transform.rotation.y, transform.rotation.z);
+    mesh.scale.set(transform.scale.x, transform.scale.y, transform.scale.z);
   }
 
   addModel(id: string, name: string, geometry: THREE.BufferGeometry): ModelData {
@@ -60,7 +81,8 @@ export class ModelManager {
       mesh,
       visible: true,
       locked: false,
-      originalGeometry: geometry.clone()
+      originalGeometry: geometry.clone(),
+      transform: this.meshToTransform(mesh)
     };
 
     this.models.set(id, modelData);
@@ -120,10 +142,13 @@ export class ModelManager {
     const newModel = this.addModel(newId, `${original.name} (Copy)`, original.originalGeometry);
     
     // Position the copy slightly offset
-    newModel.mesh.position.copy(original.mesh.position);
-    newModel.mesh.position.x += 20;
-    newModel.mesh.rotation.copy(original.mesh.rotation);
-    newModel.mesh.scale.copy(original.mesh.scale);
+    const newTransform = {
+      position: { x: original.transform.position.x + 20, y: original.transform.position.y, z: original.transform.position.z },
+      rotation: { ...original.transform.rotation },
+      scale: { ...original.transform.scale }
+    };
+    
+    this.updateModelTransform(newId, newTransform);
 
     return newModel;
   }
@@ -147,25 +172,34 @@ export class ModelManager {
     this.transformMode = mode;
   }
 
-  updateModelTransform(id: string, transform: {
-    position?: { x: number; y: number; z: number };
-    rotation?: { x: number; y: number; z: number };
-    scale?: { x: number; y: number; z: number };
-  }): void {
+  updateModelTransform(id: string, transform: Partial<ModelTransform>): void {
     const model = this.models.get(id);
     if (!model || model.locked) return;
 
+    // Update the transform state
     if (transform.position) {
-      model.mesh.position.set(transform.position.x, transform.position.y, transform.position.z);
+      model.transform.position = { ...transform.position };
     }
-
     if (transform.rotation) {
-      model.mesh.rotation.set(transform.rotation.x, transform.rotation.y, transform.rotation.z);
+      model.transform.rotation = { ...transform.rotation };
+    }
+    if (transform.scale) {
+      model.transform.scale = { ...transform.scale };
     }
 
-    if (transform.scale) {
-      model.mesh.scale.set(transform.scale.x, transform.scale.y, transform.scale.z);
-    }
+    // Update the actual mesh
+    this.updateMeshFromTransform(model.mesh, model.transform);
+  }
+
+  updateModelProperty(id: string, property: 'position' | 'rotation' | 'scale', axis: 'x' | 'y' | 'z', value: number): void {
+    const model = this.models.get(id);
+    if (!model || model.locked) return;
+
+    // Update the transform state
+    model.transform[property][axis] = value;
+
+    // Update the actual mesh
+    this.updateMeshFromTransform(model.mesh, model.transform);
   }
 
   resetModelTransform(id: string): void {
@@ -173,9 +207,14 @@ export class ModelManager {
     if (!model || model.locked) return;
 
     // Reset to default values with position at origin (0, 0, 0) and X rotation at -90 degrees
-    model.mesh.position.set(0, 0, 0);
-    model.mesh.rotation.set(-Math.PI / 2, 0, 0); // -90 degrees for X axis
-    model.mesh.scale.set(1, 1, 1);
+    const defaultTransform: ModelTransform = {
+      position: { x: 0, y: 0, z: 0 },
+      rotation: { x: -Math.PI / 2, y: 0, z: 0 },
+      scale: { x: 1, y: 1, z: 1 }
+    };
+
+    model.transform = defaultTransform;
+    this.updateMeshFromTransform(model.mesh, model.transform);
   }
 
   getAllModels(): ModelData[] {
@@ -215,7 +254,11 @@ export class ModelManager {
     this.raycaster.ray.intersectPlane(buildPlatform, intersection);
     
     const delta = intersection.clone().sub(this.dragStart);
-    selectedModel.mesh.position.copy(this.modelStartPosition.clone().add(delta));
+    const newPosition = this.modelStartPosition.clone().add(delta);
+    
+    // Update both mesh and transform state
+    selectedModel.mesh.position.copy(newPosition);
+    selectedModel.transform.position = { x: newPosition.x, y: newPosition.y, z: newPosition.z };
   }
 
   private onMouseUp(): void {
