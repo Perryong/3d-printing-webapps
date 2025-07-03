@@ -4,14 +4,23 @@ import { Clock, Calculator } from 'lucide-react';
 import { formatTime } from '../utils/formatTime';
 import { PrintEstimate } from '../utils/printEstimator';
 import { GCodeAnalysis } from '../utils/gcodeAnalyzer';
+import PricingDisplay from './PricingDisplay';
 
 interface PrintTimeDisplayProps {
   estimate: PrintEstimate | GCodeAnalysis | null;
   slicingMethod: 'simplified' | 'gcode';
+  modelVolume?: number;
 }
 
-const PrintTimeDisplay: React.FC<PrintTimeDisplayProps> = ({ estimate, slicingMethod }) => {
+const PrintTimeDisplay: React.FC<PrintTimeDisplayProps> = ({ 
+  estimate, 
+  slicingMethod,
+  modelVolume = 0
+}) => {
   if (!estimate) return null;
+
+  // Calculate model weight from volume (using PLA density: 1.24 g/cm³)
+  const modelWeight = modelVolume * 1.24;
 
   return (
     <div className="bg-gray-800 border-b border-gray-700 p-4">
@@ -54,6 +63,15 @@ const PrintTimeDisplay: React.FC<PrintTimeDisplayProps> = ({ estimate, slicingMe
           <div>Travel: {formatTime(estimate.breakdown.travel)}</div>
           <div>Overhead: {formatTime(estimate.breakdown.overhead)}</div>
         </div>
+      )}
+
+      {/* Add pricing display for simplified slicing method */}
+      {slicingMethod === 'simplified' && modelVolume > 0 && (
+        <PricingDisplay
+          printTime={estimate.totalTime}
+          modelWeight={modelWeight}
+          modelVolume={modelVolume}
+        />
       )}
     </div>
   );

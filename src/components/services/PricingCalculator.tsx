@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
-import { Calculator, Package, Clock } from 'lucide-react';
-import { mockMaterials, mockProviders } from '../../data/mockData';
+import { Calculator, Package, Clock, Zap, Weight } from 'lucide-react';
+import { mockMaterials } from '../../data/mockData';
 import { formatTime } from '../../utils/formatTime';
 
 interface PricingCalculatorProps {
@@ -18,10 +17,17 @@ const PricingCalculator: React.FC<PricingCalculatorProps> = ({
   const [selectedMaterial, setSelectedMaterial] = useState('pla');
   const [quality, setQuality] = useState('standard');
   const [quantity, setQuantity] = useState(1);
-  const [selectedProvider, setSelectedProvider] = useState('1');
 
-  const [calculatedPrice, setCalculatedPrice] = useState(0);
+  const [electricityCost, setElectricityCost] = useState(0);
+  const [materialCost, setMaterialCost] = useState(0);
+  const [totalCost, setTotalCost] = useState(0);
   const [totalTime, setTotalTime] = useState(0);
+  const [totalWeight, setTotalWeight] = useState(0);
+
+  // Pricing constants
+  const PRINTER_POWER_KW = 1.3; // 1300W converted to kW
+  const ELECTRICITY_RATE = 0.2994; // $0.2994 per kWh
+  const MATERIAL_RATE = 0.0255; // $0.0255 per gram
 
   const qualityMultipliers = {
     draft: { price: 0.8, time: 0.7 },
@@ -32,21 +38,36 @@ const PricingCalculator: React.FC<PricingCalculatorProps> = ({
 
   useEffect(() => {
     const material = mockMaterials.find(m => m.id === selectedMaterial);
-    const provider = mockProviders.find(p => p.id === selectedProvider);
     const qualityMultiplier = qualityMultipliers[quality as keyof typeof qualityMultipliers];
 
-    if (material && provider && qualityMultiplier) {
-      const materialCost = modelWeight * provider.pricePerGram * material.priceMultiplier;
-      const qualityAdjustedCost = materialCost * qualityMultiplier.price;
-      const totalCost = qualityAdjustedCost * quantity;
+    if (material && qualityMultiplier) {
+      // Calculate adjusted weight and time based on material and quality
+      const adjustedWeight = modelWeight * material.priceMultiplier * qualityMultiplier.price;
+      const adjustedTime = printTime * qualityMultiplier.time;
       
-      setCalculatedPrice(totalCost);
-      setTotalTime(printTime * qualityMultiplier.time * quantity);
+      // Calculate total values for the quantity
+      const finalWeight = adjustedWeight * quantity;
+      const finalTime = adjustedTime * quantity;
+      
+      // Calculate electricity cost: Print Hours × 1300W × $0.2994/kWh
+      const printHours = finalTime / 3600; // Convert seconds to hours
+      const calculatedElectricityCost = printHours * PRINTER_POWER_KW * ELECTRICITY_RATE;
+      
+      // Calculate material cost: Material Weight (grams) × $0.0255/gram
+      const calculatedMaterialCost = finalWeight * MATERIAL_RATE;
+      
+      // Total cost
+      const calculatedTotalCost = calculatedElectricityCost + calculatedMaterialCost;
+      
+      setElectricityCost(calculatedElectricityCost);
+      setMaterialCost(calculatedMaterialCost);
+      setTotalCost(calculatedTotalCost);
+      setTotalTime(finalTime);
+      setTotalWeight(finalWeight);
     }
-  }, [selectedMaterial, quality, quantity, selectedProvider, modelWeight, printTime]);
+  }, [selectedMaterial, quality, quantity, modelWeight, printTime]);
 
   const selectedMaterialData = mockMaterials.find(m => m.id === selectedMaterial);
-  const selectedProviderData = mockProviders.find(p => p.id === selectedProvider);
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
@@ -57,23 +78,6 @@ const PricingCalculator: React.FC<PricingCalculatorProps> = ({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Service Provider
-            </label>
-            <select
-              value={selectedProvider}
-              onChange={(e) => setSelectedProvider(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              {mockProviders.map(provider => (
-                <option key={provider.id} value={provider.id}>
-                  {provider.name} - ${provider.pricePerGram}/g
-                </option>
-              ))}
-            </select>
-          </div>
-
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Material
@@ -131,7 +135,7 @@ const PricingCalculator: React.FC<PricingCalculatorProps> = ({
                 <span>{modelVolume.toFixed(1)} cm³</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600">Weight:</span>
+                <span className="text-gray-600">Base Weight:</span>
                 <span>{modelWeight.toFixed(1)} g</span>
               </div>
               <div className="flex justify-between">
@@ -161,27 +165,48 @@ const PricingCalculator: React.FC<PricingCalculatorProps> = ({
           <div className="bg-green-50 p-4 rounded-lg border-2 border-green-200">
             <div className="flex items-center gap-2 mb-3">
               <Package className="w-5 h-5 text-green-600" />
-              <h4 className="font-medium text-gray-900">Pricing Summary</h4>
+              <h4 className="font-medium text-gray-900">Cost Breakdown</h4>
             </div>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Unit Price:</span>
-                <span>${(calculatedPrice / quantity).toFixed(2)}</span>
+            <div className="space-y-3 text-sm">
+              <div className="bg-white p-3 rounded border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Zap className="w-4 h-4 text-yellow-600" />
+                  <span className="font-medium text-gray-700">Electricity Cost</span>
+                </div>
+                <div className="text-xs text-gray-600 mb-1">
+                  {(totalTime / 3600).toFixed(2)} hrs × 1300W × $0.2994/kWh
+                </div>
+                <div className="text-right font-semibold text-yellow-700">
+                  ${electricityCost.toFixed(3)}
+                </div>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Quantity:</span>
-                <span>{quantity}</span>
+              
+              <div className="bg-white p-3 rounded border">
+                <div className="flex items-center gap-2 mb-2">
+                  <Weight className="w-4 h-4 text-purple-600" />
+                  <span className="font-medium text-gray-700">Material Cost</span>
+                </div>
+                <div className="text-xs text-gray-600 mb-1">
+                  {totalWeight.toFixed(1)} g × $0.0255/g
+                </div>
+                <div className="text-right font-semibold text-purple-700">
+                  ${materialCost.toFixed(2)}
+                </div>
               </div>
-              <div className="flex justify-between items-center">
-                <Clock className="w-4 h-4 text-gray-600" />
-                <span className="text-gray-600">Total Time:</span>
+
+              <div className="flex justify-between items-center pt-2 border-t">
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-gray-600" />
+                  <span className="text-gray-600">Total Time:</span>
+                </div>
                 <span>{formatTime(totalTime)}</span>
               </div>
+              
               <div className="border-t pt-2">
                 <div className="flex justify-between items-center">
-                  <span className="font-medium text-gray-900">Total:</span>
+                  <span className="font-medium text-gray-900">Total Cost:</span>
                   <span className="text-xl font-bold text-green-600">
-                    ${calculatedPrice.toFixed(2)}
+                    ${totalCost.toFixed(2)}
                   </span>
                 </div>
               </div>
