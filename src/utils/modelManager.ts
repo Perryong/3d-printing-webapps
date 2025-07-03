@@ -25,6 +25,9 @@ export class ModelManager {
   private isDragging = false;
   private dragStart = new THREE.Vector3();
   private modelStartPosition = new THREE.Vector3();
+  private isHovering = false;
+  private hoveredModelId: string | null = null;
+  private originalTransformMode: 'select' | 'move' | 'rotate' | 'scale' = 'select';
 
   constructor(
     private scene: THREE.Scene,
@@ -32,6 +35,7 @@ export class ModelManager {
     private renderer: THREE.WebGLRenderer
   ) {
     this.setupEventListeners();
+    this.setupCursorStyles();
   }
 
   private setupEventListeners() {
@@ -39,6 +43,34 @@ export class ModelManager {
     this.renderer.domElement.addEventListener('mousemove', this.onMouseMove.bind(this));
     this.renderer.domElement.addEventListener('mouseup', this.onMouseUp.bind(this));
     this.renderer.domElement.addEventListener('click', this.onMouseClick.bind(this));
+  }
+
+  private setupCursorStyles() {
+    // Add CSS for cursor styles
+    const style = document.createElement('style');
+    style.textContent = `
+      .model-hover { cursor: grab !important; }
+      .model-dragging { cursor: grabbing !important; }
+      .model-locked { cursor: not-allowed !important; }
+    `;
+    document.head.appendChild(style);
+  }
+
+  private updateCursor() {
+    const canvas = this.renderer.domElement;
+    
+    if (this.isDragging) {
+      canvas.className = 'model-dragging';
+    } else if (this.hoveredModelId) {
+      const model = this.models.get(this.hoveredModelId);
+      if (model?.locked) {
+        canvas.className = 'model-locked';
+      } else {
+        canvas.className = 'model-hover';
+      }
+    } else {
+      canvas.className = '';
+    }
   }
 
   private meshToTransform(mesh: THREE.Mesh): ModelTransform {
@@ -170,6 +202,7 @@ export class ModelManager {
 
   setTransformMode(mode: 'select' | 'move' | 'rotate' | 'scale'): void {
     this.transformMode = mode;
+    this.originalTransformMode = mode;
   }
 
   updateModelTransform(id: string, transform: Partial<ModelTransform>): void {
@@ -222,51 +255,90 @@ export class ModelManager {
   }
 
   private onMouseDown(event: MouseEvent): void {
-    if (this.transformMode !== 'move') return;
-
-    const selectedModel = this.getSelectedModel();
-    if (!selectedModel || selectedModel.locked) return;
-
-    this.isDragging = true;
     this.updateMousePosition(event);
-    
-    // Calculate intersection with build platform
     this.raycaster.setFromCamera(this.mouse, this.camera);
-    const buildPlatform = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
-    const intersection = new THREE.Vector3();
-    this.raycaster.ray.intersectPlane(buildPlatform, intersection);
     
-    this.dragStart.copy(intersection);
-    this.modelStartPosition.copy(selectedModel.mesh.position);
+    const meshes = Array.from(this.models.values()).map(model => model.mesh);
+    const intersects = this.raycaster.intersectObjects(meshes);
+    
+    if (intersects.length > 0) {
+      const clickedMesh = intersects[0].object as THREE.Mesh;
+      const modelId = clickedMesh.userData.modelId;
+      const model = this.models.get(modelId);
+      
+      if (model && !model.locked) {
+        // Auto-switch to move mode when starting to drag
+        this.originalTransformMode = this.transformMode;
+        this.transformMode = 'move';
+        
+        this.selectModel(modelId);
+        this.isDragging = true;
+        
+        // Calculate intersection with build platform
+        const buildPlatform = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+        const intersection = new THREE.Vector3();
+        this.raycaster.ray.intersectPlane(buildPlatform, intersection);
+        
+        this.dragStart.copy(intersection);
+        this.modelStartPosition.copy(model.mesh.position);
+        
+        this.updateCursor();
+      }
+    }
   }
 
   private onMouseMove(event: MouseEvent): void {
-    if (!this.isDragging || this.transformMode !== 'move') return;
-
-    const selectedModel = this.getSelectedModel();
-    if (!selectedModel || selectedModel.locked) return;
-
     this.updateMousePosition(event);
     
-    this.raycaster.setFromCamera(this.mouse, this.camera);
-    const buildPlatform = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
-    const intersection = new THREE.Vector3();
-    this.raycaster.ray.intersectPlane(buildPlatform, intersection);
-    
-    const delta = intersection.clone().sub(this.dragStart);
-    const newPosition = this.modelStartPosition.clone().add(delta);
-    
-    // Update both mesh and transform state
-    selectedModel.mesh.position.copy(newPosition);
-    selectedModel.transform.position = { x: newPosition.x, y: newPosition.y, z: newPosition.z };
+    if (this.isDragging && this.selectedModelId) {
+      const selectedModel = this.models.get(this.selectedModelId);
+      if (!selectedModel || selectedModel.locked) return;
+
+      this.raycaster.setFromCamera(this.mouse, this.camera);
+      const buildPlatform = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+      const intersection = new THREE.Vector3();
+      this.raycaster.ray.intersectPlane(buildPlatform, intersection);
+      
+      const delta = intersection.clone().sub(this.dragStart);
+      const newPosition = this.modelStartPosition.clone().add(delta);
+      
+      // Update both mesh and transform state
+      selectedModel.mesh.position.copy(newPosition);
+      selectedModel.transform.position = { x: newPosition.x, y: newPosition.y, z: newPosition.z };
+    } else {
+      // Handle hover effects
+      this.raycaster.setFromCamera(this.mouse, this.camera);
+      const meshes = Array.from(this.models.values()).map(model => model.mesh);
+      const intersects = this.raycaster.intersectObjects(meshes);
+      
+      const previousHoveredId = this.hoveredModelId;
+      
+      if (intersects.length > 0) {
+        const hoveredMesh = intersects[0].object as THREE.Mesh;
+        this.hoveredModelId = hoveredMesh.userData.modelId;
+      } else {
+        this.hoveredModelId = null;
+      }
+      
+      // Update cursor if hover state changed
+      if (previousHoveredId !== this.hoveredModelId) {
+        this.updateCursor();
+      }
+    }
   }
 
   private onMouseUp(): void {
-    this.isDragging = false;
+    if (this.isDragging) {
+      // Restore original transform mode after dragging
+      this.transformMode = this.originalTransformMode;
+      this.isDragging = false;
+      this.updateCursor();
+    }
   }
 
   private onMouseClick(event: MouseEvent): void {
-    if (this.transformMode !== 'select') return;
+    // Only handle selection if we're not dragging and in select mode
+    if (this.transformMode !== 'select' && !this.isDragging) return;
 
     this.updateMousePosition(event);
     this.raycaster.setFromCamera(this.mouse, this.camera);
