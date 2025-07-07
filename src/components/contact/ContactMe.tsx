@@ -1,6 +1,7 @@
-
 import React, { useState } from 'react';
 import { Mail, Phone, MapPin, Linkedin, Github, Globe, Send } from 'lucide-react';
+import emailjs from '@emailjs/browser';
+import { toast } from 'sonner';
 
 const contactData = {
   email: "perryong0000@gmail.com",
@@ -11,6 +12,13 @@ const contactData = {
   location: "Singapore"
 };
 
+// EmailJS configuration with your credentials
+const EMAILJS_CONFIG = {
+  serviceId: import.meta.env.VITE_EMAILJS_SERVICE_ID,
+  templateId: import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+  publicKey: import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+};
+
 const ContactMe: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
@@ -18,6 +26,7 @@ const ContactMe: React.FC = () => {
     subject: '',
     message: ''
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -27,12 +36,71 @@ const ContactMe: React.FC = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const validateForm = () => {
+    if (!formData.name.trim()) {
+      toast.error('Please enter your name');
+      return false;
+    }
+    if (!formData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      toast.error('Please enter a valid email address');
+      return false;
+    }
+    if (!formData.subject.trim()) {
+      toast.error('Please enter a subject');
+      return false;
+    }
+    if (!formData.message.trim()) {
+      toast.error('Please enter a message');
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle form submission (this would typically send to a backend)
-    console.log('Form submitted:', formData);
-    alert('Thank you for your message! I\'ll get back to you soon.');
-    setFormData({ name: '', email: '', subject: '', message: '' });
+    
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      // Send email using EmailJS
+      const result = await emailjs.send(
+        EMAILJS_CONFIG.serviceId,
+        EMAILJS_CONFIG.templateId,
+        {
+          from_name: formData.name,
+          from_email: formData.email,
+          subject: formData.subject,
+          message: formData.message,
+          to_email: contactData.email,
+        },
+        EMAILJS_CONFIG.publicKey
+      );
+      
+      if (result.status === 200) {
+        toast.success('Message sent successfully! I\'ll get back to you soon.');
+        setFormData({ name: '', email: '', subject: '', message: '' });
+      } else {
+        throw new Error('Failed to send email');
+      }
+    } catch (error) {
+      console.error('Failed to send email:', error);
+      
+      // Fallback to mailto on error
+      const subject = encodeURIComponent(formData.subject);
+      const body = encodeURIComponent(
+        `Name: ${formData.name}\nEmail: ${formData.email}\n\nMessage:\n${formData.message}`
+      );
+      const mailtoLink = `mailto:${contactData.email}?subject=${subject}&body=${body}`;
+      
+      window.open(mailtoLink, '_blank');
+      toast.error('Email service unavailable. Opening your email client as backup.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -168,10 +236,15 @@ const ContactMe: React.FC = () => {
 
           <button
             type="submit"
-            className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
+            disabled={isSubmitting}
+            className={`w-full px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 ${
+              isSubmitting 
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-blue-600 hover:bg-blue-700'
+            } text-white`}
           >
             <Send className="w-5 h-5" />
-            Send Message
+            {isSubmitting ? 'Sending...' : 'Send Message'}
           </button>
         </form>
       </div>

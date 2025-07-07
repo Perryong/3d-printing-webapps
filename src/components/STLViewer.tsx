@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { Move3D, Settings, Store, Calculator as CalcIcon } from 'lucide-react';
+import { Toaster } from 'sonner';
 
 // Components
 import FileUpload from './FileUpload';
@@ -545,6 +546,7 @@ const STLViewer: React.FC = () => {
           )}
         </div>
       </div>
+      <Toaster />
     </div>
   );
 };
