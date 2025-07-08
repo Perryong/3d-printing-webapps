@@ -14,9 +14,9 @@ const contactData = {
 
 // EmailJS configuration with your credentials
 const EMAILJS_CONFIG = {
-  serviceId: import.meta.env.VITE_EMAILJS_SERVICE_ID,
-  templateId: import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
-  publicKey: import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+  serviceId: 'service_ngmmxxm',
+  templateId: 'template_n46vbft',
+  publicKey: 'pJZ6tAZ5dH_Aazb7E'
 };
 
 const ContactMe: React.FC = () => {
