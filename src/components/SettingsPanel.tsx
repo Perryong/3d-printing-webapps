@@ -1,16 +1,8 @@
-
 import React, { useState } from 'react';
-import { Settings, Printer, Bell, Monitor, Layers, Wrench } from 'lucide-react';
+import { Settings } from 'lucide-react';
 import { PrintSettings } from '../utils/printEstimator';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-
-// Import new components
 import { ProfileSelector } from './settings/ProfileSelector';
-import { PrintSettings as PrintSettingsComponent } from './settings/PrintSettings';
-import { AdvancedSettings } from './settings/AdvancedSettings';
-import { DisplaySettings } from './settings/DisplaySettings';
-import { NotificationSettings } from './settings/NotificationSettings';
 import { SettingsActions } from './settings/SettingsActions';
 
 interface SettingsPanelProps {
@@ -104,66 +96,16 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onSettingsChang
       {/* Scrollable Content Area */}
       <ScrollArea className="flex-1">
         <div className="p-4">
-          <Tabs defaultValue="profiles" className="w-full">
-            <TabsList className="grid w-full grid-cols-5 mb-4 bg-gray-700 text-xs">
-              <TabsTrigger value="profiles" className="text-xs p-1">
-                <Layers className="w-3 h-3" />
-              </TabsTrigger>
-              <TabsTrigger value="print" className="text-xs p-1">
-                <Printer className="w-3 h-3" />
-              </TabsTrigger>
-              <TabsTrigger value="advanced" className="text-xs p-1">
-                <Wrench className="w-3 h-3" />
-              </TabsTrigger>
-              <TabsTrigger value="display" className="text-xs p-1">
-                <Monitor className="w-3 h-3" />
-              </TabsTrigger>
-              <TabsTrigger value="notifications" className="text-xs p-1">
-                <Bell className="w-3 h-3" />
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="profiles" className="space-y-4">
-              <ProfileSelector
-                settings={settings}
-                onSettingsChange={onSettingsChange}
-                selectedQuality={selectedQuality}
-                selectedMaterial={selectedMaterial}
-                onQualityChange={setSelectedQuality}
-                onMaterialChange={setSelectedMaterial}
-                onAdvancedChange={setAdvancedSettings}
-                advancedSettings={advancedSettings}
-              />
-            </TabsContent>
-
-            <TabsContent value="print" className="space-y-4">
-              <PrintSettingsComponent
-                settings={settings}
-                onSettingsChange={onSettingsChange}
-              />
-            </TabsContent>
-
-            <TabsContent value="advanced" className="space-y-4">
-              <AdvancedSettings
-                advancedSettings={advancedSettings}
-                onAdvancedChange={setAdvancedSettings}
-              />
-            </TabsContent>
-
-            <TabsContent value="display" className="space-y-4">
-              <DisplaySettings
-                display={display}
-                onDisplayChange={setDisplay}
-              />
-            </TabsContent>
-
-            <TabsContent value="notifications" className="space-y-4">
-              <NotificationSettings
-                notifications={notifications}
-                onNotificationsChange={setNotifications}
-              />
-            </TabsContent>
-          </Tabs>
+          <ProfileSelector
+            settings={settings}
+            onSettingsChange={onSettingsChange}
+            selectedQuality={selectedQuality}
+            selectedMaterial={selectedMaterial}
+            onQualityChange={setSelectedQuality}
+            onMaterialChange={setSelectedMaterial}
+            onAdvancedChange={setAdvancedSettings}
+            advancedSettings={advancedSettings}
+          />
         </div>
       </ScrollArea>
     </div>
