@@ -55,15 +55,6 @@ const PrintTimeDisplay: React.FC<PrintTimeDisplayProps> = ({
           {slicingMethod === 'simplified' ? 'Estimated' : 'G-code Analysis'}
         </div>
       </div>
-      
-      {'breakdown' in estimate && estimate.breakdown && (
-        <div className="mt-2 grid grid-cols-4 gap-4 text-xs text-gray-400">
-          <div>Outer Walls: {formatTime(estimate.breakdown.outerWalls)}</div>
-          <div>Infill: {formatTime(estimate.breakdown.infill)}</div>
-          <div>Travel: {formatTime(estimate.breakdown.travel)}</div>
-          <div>Overhead: {formatTime(estimate.breakdown.overhead)}</div>
-        </div>
-      )}
 
       {/* Add pricing display for simplified slicing method */}
       {slicingMethod === 'simplified' && modelVolume > 0 && (
