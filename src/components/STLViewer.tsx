@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { Move3D, Settings, Store, Calculator as CalcIcon } from 'lucide-react';
-import { Toaster } from 'sonner';
+import { Toaster, toast } from 'sonner';
 
 // Components
 import FileUpload from './FileUpload';
@@ -21,6 +21,12 @@ import { analyzeGCode, GCodeAnalysis } from '../utils/gcodeAnalyzer';
 import { createScene, SceneRefs, OrbitControls } from '../utils/sceneManager';
 import { ModelManager, ModelData } from '../utils/modelManager';
 
+// Services
+import { uploadFileToStorage } from '../services/firebaseStorage';
+
+// Context
+import { useApp } from '../context/AppContext';
+
 // Constants
 import { DEFAULT_PRINT_SETTINGS } from '../constants/printerSpecs';
 
@@ -38,6 +44,8 @@ interface ModelInfo {
 type ViewMode = 'viewer' | 'about' | 'contact';
 
 const STLViewer: React.FC = () => {
+  const { dispatch, state } = useApp();
+  
   // State
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -92,12 +100,51 @@ const STLViewer: React.FC = () => {
     }
   }, []);
 
+  // Upload file to Firebase
+  const uploadToFirebase = async (file: File) => {
+    try {
+      dispatch({ type: 'FIREBASE_UPLOAD_START', payload: file.name });
+      toast.info(`Uploading ${file.name} to cloud storage...`);
+      
+      const uploadResult = await uploadFileToStorage(file);
+      
+      dispatch({ 
+        type: 'FIREBASE_UPLOAD_SUCCESS', 
+        payload: { 
+          fileName: file.name, 
+          metadata: {
+            ...uploadResult,
+            uploadedAt: new Date()
+          }
+        }
+      });
+      
+      toast.success(`${file.name} uploaded to cloud storage successfully!`);
+      console.log('File uploaded to Firebase:', uploadResult);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+      dispatch({ 
+        type: 'FIREBASE_UPLOAD_ERROR', 
+        payload: { fileName: file.name, error: errorMessage }
+      });
+      toast.error(`Failed to upload ${file.name} to cloud storage: ${errorMessage}`);
+      console.error('Firebase upload error:', error);
+    }
+  };
+
   // Load STL file
   const loadSTLFile = useCallback(async (file: File) => {
     setIsLoading(true);
     setError('');
     
     try {
+      // Store the file in app context for contact form
+      dispatch({ type: 'ADD_UPLOADED_FILE', payload: file });
+      toast.success(`File "${file.name}" loaded into viewer`);
+
+      // Upload to Firebase in the background
+      uploadToFirebase(file);
+
       const arrayBuffer = await file.arrayBuffer();
       const geometry = loadSTL(arrayBuffer);
       
@@ -151,7 +198,7 @@ const STLViewer: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [printSettings, slicingMethod]);
+  }, [printSettings, slicingMethod, dispatch]);
 
   // Handle G-code file upload
   const handleGCodeUpload = useCallback(async (file: File) => {
@@ -159,6 +206,13 @@ const STLViewer: React.FC = () => {
     setError('');
     
     try {
+      // Store the file in app context for contact form
+      dispatch({ type: 'ADD_UPLOADED_FILE', payload: file });
+      toast.success(`File "${file.name}" loaded into viewer`);
+
+      // Upload to Firebase in the background
+      uploadToFirebase(file);
+
       const content = await file.text();
       const analysis = analyzeGCode(content);
       setPrintTimeEstimate(analysis);
@@ -174,7 +228,7 @@ const STLViewer: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [dispatch]);
 
   // Handle file upload
   const handleFileUpload = useCallback((file: File) => {
@@ -375,6 +429,11 @@ const STLViewer: React.FC = () => {
 
   const selectedModel = models.find(m => m.id === selectedModelId);
 
+  // Get current file upload status
+  const currentFile = state.uploadedFiles.find(f => f.name === fileName);
+  const isUploading = currentFile?.isUploading || false;
+  const uploadError = currentFile?.uploadError;
+
   return (
     <div className="w-full h-screen bg-gray-900 flex flex-col">
       {/* Header */}
@@ -386,7 +445,12 @@ const STLViewer: React.FC = () => {
           </h1>
           
           <div className="flex items-center gap-4">
-            <FileUpload onFileSelect={handleFileUpload} isLoading={isLoading} />
+            <FileUpload 
+              onFileSelect={handleFileUpload} 
+              isLoading={isLoading}
+              isUploading={isUploading}
+              uploadError={uploadError}
+            />
             
             {/* View Mode Tabs */}
             <div className="flex bg-gray-700 rounded-lg p-1">
