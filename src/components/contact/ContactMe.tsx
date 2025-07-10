@@ -1,7 +1,10 @@
+
 import React, { useState } from 'react';
 import { Mail, Phone, MapPin, Linkedin, Github, Globe, Send } from 'lucide-react';
 import emailjs from '@emailjs/browser';
 import { toast } from 'sonner';
+import { useApp } from '../../context/AppContext';
+import FirebaseFileList from './FirebaseFileList';
 
 const contactData = {
   email: "perryong0000@gmail.com",
@@ -20,6 +23,7 @@ const EMAILJS_CONFIG = {
 };
 
 const ContactMe: React.FC = () => {
+  const { state } = useApp();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -56,6 +60,35 @@ const ContactMe: React.FC = () => {
     return true;
   };
 
+  const formatFirebaseFilesInfo = () => {
+    if (state.uploadedFiles.length === 0) {
+      return '';
+    }
+
+    const fileInfoList = state.uploadedFiles.map((file, index) => {
+      const status = file.firebaseMetadata 
+        ? '✅ Stored in cloud' 
+        : file.isUploading 
+        ? '⏳ Uploading...' 
+        : '❌ Upload failed';
+      
+      const info = [
+        `${index + 1}. ${file.name}`,
+        `   Size: ${(file.size / 1024 / 1024).toFixed(2)} MB`,
+        `   Status: ${status}`
+      ];
+
+      if (file.firebaseMetadata) {
+        info.push(`   Cloud URL: ${file.firebaseMetadata.url}`);
+        info.push(`   Storage Path: ${file.firebaseMetadata.path}`);
+      }
+
+      return info.join('\n');
+    }).join('\n\n');
+
+    return `\n\n--- UPLOADED FILES ---\n${fileInfoList}\n--- END FILES ---`;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -66,17 +99,25 @@ const ContactMe: React.FC = () => {
     setIsSubmitting(true);
     
     try {
+      const firebaseFilesInfo = formatFirebaseFilesInfo();
+      const emailMessage = formData.message + firebaseFilesInfo;
+
+      // Prepare email data without file attachments
+      const emailData = {
+        from_name: formData.name,
+        from_email: formData.email,
+        subject: formData.subject,
+        message: emailMessage,
+        to_email: contactData.email,
+        file_count: state.uploadedFiles.length.toString(),
+        has_files: state.uploadedFiles.length > 0 ? 'true' : 'false'
+      };
+
       // Send email using EmailJS
       const result = await emailjs.send(
         EMAILJS_CONFIG.serviceId,
         EMAILJS_CONFIG.templateId,
-        {
-          from_name: formData.name,
-          from_email: formData.email,
-          subject: formData.subject,
-          message: formData.message,
-          to_email: contactData.email,
-        },
+        emailData,
         EMAILJS_CONFIG.publicKey
       );
       
@@ -91,8 +132,12 @@ const ContactMe: React.FC = () => {
       
       // Fallback to mailto on error
       const subject = encodeURIComponent(formData.subject);
+      const fileNote = state.uploadedFiles.length > 0 
+        ? `\n\nUploaded Files (${state.uploadedFiles.length}):\n${state.uploadedFiles.map(f => `- ${f.name}${f.firebaseMetadata ? ` (Cloud: ${f.firebaseMetadata.url})` : ''}`).join('\n')}`
+        : '';
+      
       const body = encodeURIComponent(
-        `Name: ${formData.name}\nEmail: ${formData.email}\n\nMessage:\n${formData.message}`
+        `Name: ${formData.name}\nEmail: ${formData.email}\n\nMessage:\n${formData.message}${fileNote}`
       );
       const mailtoLink = `mailto:${contactData.email}?subject=${subject}&body=${body}`;
       
@@ -234,6 +279,11 @@ const ContactMe: React.FC = () => {
             />
           </div>
 
+          {/* Firebase Files Information Section */}
+          <div className="border-t border-gray-200 pt-6">
+            <FirebaseFileList files={state.uploadedFiles} />
+          </div>
+
           <button
             type="submit"
             disabled={isSubmitting}
@@ -244,7 +294,7 @@ const ContactMe: React.FC = () => {
             } text-white`}
           >
             <Send className="w-5 h-5" />
-            {isSubmitting ? 'Sending...' : 'Send Message'}
+            {isSubmitting ? 'Sending...' : `Send Message${state.uploadedFiles.length > 0 ? ` (${state.uploadedFiles.length} file${state.uploadedFiles.length > 1 ? 's' : ''} info)` : ''}`}
           </button>
         </form>
       </div>

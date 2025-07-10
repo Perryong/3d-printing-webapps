@@ -1,7 +1,10 @@
+
 import React, { useState } from 'react';
 import { Settings } from 'lucide-react';
 import { PrintSettings } from '../utils/printEstimator';
 import { ScrollArea } from '@/components/ui/scroll-area';
+
+// Import ProfileSelector component
 import { ProfileSelector } from './settings/ProfileSelector';
 import { SettingsActions } from './settings/SettingsActions';
 
