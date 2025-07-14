@@ -43,16 +43,16 @@ const PrintTimeDisplay: React.FC<PrintTimeDisplayProps> = ({
           )}
           
           {estimate.materialUsed && (
-            <div className="text-sm text-gray-300">
-              <span className="font-semibold">Material:</span> {estimate.materialUsed.length.toFixed(1)}m 
-              ({estimate.materialUsed.weight.toFixed(1)}g)
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-gray-300">
+                <span className="font-semibold">Material:</span> {estimate.materialUsed.weight.toFixed(1)}g
+              </div>
+              <div className="flex items-center gap-2 text-xs text-gray-400">
+                <Calculator className="w-4 h-4" />
+                {slicingMethod === 'simplified' ? 'Estimated' : 'G-code Analysis'}
+              </div>
             </div>
           )}
-        </div>
-        
-        <div className="flex items-center gap-2 text-xs text-gray-400">
-          <Calculator className="w-4 h-4" />
-          {slicingMethod === 'simplified' ? 'Estimated' : 'G-code Analysis'}
         </div>
       </div>
 
