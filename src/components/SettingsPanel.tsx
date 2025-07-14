@@ -74,12 +74,13 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onSettingsChang
   });
 
   return (
-    <div className="w-80 bg-gray-800 border-r border-gray-700 flex flex-col h-full">
+    <div className="w-full sm:w-72 md:w-80 lg:w-80 xl:w-96 bg-gray-800 border-r border-gray-700 flex flex-col h-full">
       {/* Fixed Header with Title and Action Buttons */}
-      <div className="p-4 border-b border-gray-700">
-        <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-          <Settings className="w-5 h-5" />
-          Slicer Settings
+      <div className="p-2 lg:p-4 border-b border-gray-700">
+        <h3 className="text-base lg:text-lg font-semibold text-white mb-2 lg:mb-4 flex items-center gap-2">
+          <Settings className="w-4 h-4 lg:w-5 lg:h-5" />
+          <span className="hidden sm:inline">Slicer Settings</span>
+          <span className="sm:hidden">Settings</span>
         </h3>
         
         {/* Action Buttons at Top */}
@@ -98,7 +99,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onSettingsChang
 
       {/* Scrollable Content Area */}
       <ScrollArea className="flex-1">
-        <div className="p-4">
+        <div className="p-2 lg:p-4">
           <ProfileSelector
             settings={settings}
             onSettingsChange={onSettingsChange}
