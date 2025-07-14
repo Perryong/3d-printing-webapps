@@ -439,12 +439,13 @@ const STLViewer: React.FC = () => {
       {/* Header */}
       <div className="bg-gray-800 p-4 border-b border-gray-700">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Move3D className="w-8 h-8 text-blue-400" />
-            3D Print Services Platform
+          <h1 className="text-xl lg:text-2xl font-bold text-white flex items-center gap-2">
+            <Move3D className="w-6 h-6 lg:w-8 lg:h-8 text-blue-400" />
+            <span className="hidden sm:inline">3D Print Services Platform</span>
+            <span className="sm:hidden">3D Print Services</span>
           </h1>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 lg:gap-4">
             <FileUpload 
               onFileSelect={handleFileUpload} 
               isLoading={isLoading}
@@ -456,7 +457,7 @@ const STLViewer: React.FC = () => {
             <div className="flex bg-gray-700 rounded-lg p-1">
               <button
                 onClick={() => setViewMode('viewer')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                className={`px-2 lg:px-3 py-2 rounded-md text-xs lg:text-sm font-medium transition-colors ${
                   viewMode === 'viewer' 
                     ? 'bg-blue-600 text-white' 
                     : 'text-gray-300 hover:text-white'
@@ -466,25 +467,25 @@ const STLViewer: React.FC = () => {
               </button>
               <button
                 onClick={() => setViewMode('about')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-1 ${
+                className={`px-2 lg:px-3 py-2 rounded-md text-xs lg:text-sm font-medium transition-colors flex items-center gap-1 ${
                   viewMode === 'about' 
                     ? 'bg-blue-600 text-white' 
                     : 'text-gray-300 hover:text-white'
                 }`}
               >
-                <Store className="w-4 h-4" />
-                About
+                <Store className="w-3 h-3 lg:w-4 lg:h-4" />
+                <span className="hidden sm:inline">About</span>
               </button>
               <button
                 onClick={() => setViewMode('contact')}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-1 ${
+                className={`px-2 lg:px-3 py-2 rounded-md text-xs lg:text-sm font-medium transition-colors flex items-center gap-1 ${
                   viewMode === 'contact' 
                     ? 'bg-blue-600 text-white' 
                     : 'text-gray-300 hover:text-white'
                 }`}
               >
-                <CalcIcon className="w-4 h-4" />
-                Contact
+                <CalcIcon className="w-3 h-3 lg:w-4 lg:h-4" />
+                <span className="hidden sm:inline">Contact</span>
               </button>
             </div>
             
@@ -495,14 +496,14 @@ const STLViewer: React.FC = () => {
                   console.log('Settings button clicked, current showSettings:', showSettings);
                   setShowSettings(!showSettings);
                 }}
-                className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
+                className={`px-2 lg:px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
                   showSettings 
                     ? 'bg-blue-600 hover:bg-blue-700 text-white' 
                     : 'bg-gray-700 hover:bg-gray-600 text-white'
                 }`}
               >
                 <Settings className="w-4 h-4" />
-                Settings
+                <span className="hidden lg:inline">Settings</span>
               </button>
             )}
             
@@ -519,11 +520,11 @@ const STLViewer: React.FC = () => {
         {/* File Info */}
         {fileName && (
           <div className="mt-3 text-sm text-gray-300">
-            <div className="flex flex-wrap items-center gap-4">
+            <div className="flex flex-wrap items-center gap-2 lg:gap-4">
               <span><span className="font-semibold">File:</span> {fileName}</span>
               {modelInfo && (
                 <>
-                  <span><span className="font-semibold">Triangles:</span> {modelInfo.triangles.toLocaleString()}</span>
+                  <span className="hidden sm:inline"><span className="font-semibold">Triangles:</span> {modelInfo.triangles.toLocaleString()}</span>
                   <span><span className="font-semibold">Size:</span> {modelInfo.size.x} × {modelInfo.size.y} × {modelInfo.size.z} mm</span>
                   <span><span className="font-semibold">Volume:</span> {modelInfo.volume} cm³</span>
                 </>
@@ -536,7 +537,7 @@ const STLViewer: React.FC = () => {
       <div className="flex flex-1 overflow-hidden">
         {/* Left Panel - Model List and Transform Controls */}
         {viewMode === 'viewer' && (
-          <div className="w-80 bg-gray-900 border-r border-gray-700 p-4 space-y-4 overflow-y-auto">
+          <div className="w-full sm:w-72 md:w-80 lg:w-80 xl:w-96 bg-gray-900 border-r border-gray-700 p-2 lg:p-4 space-y-4 overflow-y-auto flex-shrink-0">
             <ModelList
               models={models.map(m => ({
                 id: m.id,
@@ -570,7 +571,7 @@ const STLViewer: React.FC = () => {
 
         {/* Settings panel - visible in viewer mode when showSettings is true */}
         {viewMode === 'viewer' && showSettings && (
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 w-full sm:w-72 md:w-80 lg:w-80 xl:w-96">
             <SettingsPanel
               settings={printSettings}
               onSettingsChange={setPrintSettings}
@@ -578,7 +579,7 @@ const STLViewer: React.FC = () => {
           </div>
         )}
 
-        <div className="flex-1 flex flex-col relative">
+        <div className="flex-1 flex flex-col relative min-w-0">
           {/* Viewer Section - Always mounted but hidden when not active */}
           <div className={`${viewMode === 'viewer' ? 'flex flex-col flex-1' : 'hidden'}`}>
             <PrintTimeDisplay
@@ -597,14 +598,14 @@ const STLViewer: React.FC = () => {
 
           {/* About Section */}
           {viewMode === 'about' && (
-            <div className="flex-1 p-6 bg-gray-100 overflow-y-auto">
+            <div className="flex-1 p-4 lg:p-6 bg-gray-100 overflow-y-auto">
               <AboutMe />
             </div>
           )}
 
           {/* Contact Section */}
           {viewMode === 'contact' && (
-            <div className="flex-1 p-6 bg-gray-100 overflow-y-auto">
+            <div className="flex-1 p-4 lg:p-6 bg-gray-100 overflow-y-auto">
               <ContactMe />
             </div>
           )}
