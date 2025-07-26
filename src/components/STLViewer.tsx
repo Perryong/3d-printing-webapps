@@ -20,6 +20,7 @@ import { estimatePrintTime, PrintSettings, PrintEstimate } from '../utils/printE
 import { analyzeGCode, GCodeAnalysis } from '../utils/gcodeAnalyzer';
 import { createScene, SceneRefs, OrbitControls } from '../utils/sceneManager';
 import { ModelManager, ModelData } from '../utils/modelManager';
+import { calculateMeshVolume, convertMmToCm } from '@/utils/stlVolumeCalculator';
 
 // Services
 import { uploadFileToStorage } from '../services/firebaseStorage';
@@ -176,6 +177,10 @@ const STLViewer: React.FC = () => {
       );
       sceneRefs.current.camera.lookAt(0, 0, size.z / 2);
       
+      // Calculate actual mesh volume using proper geometry calculation
+      const volumeMm3 = calculateMeshVolume(geometry);
+      const volumeCm3 = convertMmToCm(volumeMm3);
+      
       setFileName(file.name);
       setModelInfo({
         vertices: geometry.attributes.position.count,
@@ -185,7 +190,7 @@ const STLViewer: React.FC = () => {
           y: size.y.toFixed(2),
           z: size.z.toFixed(2)
         },
-        volume: (size.x * size.y * size.z / 1000).toFixed(2)
+        volume: volumeCm3.toFixed(2)
       });
       
       if (slicingMethod === 'simplified') {
