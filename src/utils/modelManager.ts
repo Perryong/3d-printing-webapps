@@ -1,4 +1,7 @@
 import * as THREE from 'three';
+import { ModelAxisHelper } from './modelAxisHelper';
+import { positionModelInBuildVolume, constrainToBuiltVolume, isModelWithinBuildVolume } from './modelPositioning';
+import type { SceneRefs } from './sceneManager';
 
 export interface ModelTransform {
   position: { x: number; y: number; z: number };
@@ -14,6 +17,7 @@ export interface ModelData {
   locked: boolean;
   originalGeometry: THREE.BufferGeometry;
   transform: ModelTransform;
+  axisHelper: ModelAxisHelper;
 }
 
 export class ModelManager {
@@ -28,12 +32,16 @@ export class ModelManager {
   private isHovering = false;
   private hoveredModelId: string | null = null;
   private originalTransformMode: 'select' | 'move' | 'rotate' | 'scale' = 'select';
+  private onModelPositionedCallback?: (wasScaled: boolean) => void;
+  private sceneRefs?: SceneRefs;
 
   constructor(
     private scene: THREE.Scene,
     private camera: THREE.Camera,
-    private renderer: THREE.WebGLRenderer
+    private renderer: THREE.WebGLRenderer,
+    sceneRefs?: SceneRefs
   ) {
+    this.sceneRefs = sceneRefs;
     this.setupEventListeners();
     this.setupCursorStyles();
   }
@@ -99,11 +107,18 @@ export class ModelManager {
     mesh.receiveShadow = true;
     mesh.userData.modelId = id;
 
-    // Set default position to origin (0, 0, 0)
-    mesh.position.set(0, 0, 0);
-    
-    // Set default rotation with X at -90 degrees
+    // Set default rotation with X at -90 degrees BEFORE positioning
     mesh.rotation.set(-Math.PI / 2, 0, 0); // -90 degrees in radians for X axis
+    
+    // Auto-position the model inside build volume
+    const positioning = positionModelInBuildVolume(geometry);
+    mesh.position.copy(positioning.position);
+    mesh.scale.copy(positioning.scale);
+
+    // Create axis helper for this model
+    const axisHelper = new ModelAxisHelper();
+    this.scene.add(axisHelper.getGroup());
+    axisHelper.updateForModel(mesh);
 
     this.scene.add(mesh);
 
@@ -114,10 +129,20 @@ export class ModelManager {
       visible: true,
       locked: false,
       originalGeometry: geometry.clone(),
-      transform: this.meshToTransform(mesh)
+      transform: this.meshToTransform(mesh),
+      axisHelper
     };
 
     this.models.set(id, modelData);
+    
+    // Update dynamic platform for all models
+    this.updateDynamicPlatform();
+    
+    // Notify if model was scaled to fit
+    if (positioning.wasScaled && this.onModelPositionedCallback) {
+      this.onModelPositionedCallback(true);
+    }
+    
     return modelData;
   }
 
@@ -126,6 +151,9 @@ export class ModelManager {
     if (!model) return false;
 
     this.scene.remove(model.mesh);
+    this.scene.remove(model.axisHelper.getGroup());
+    model.axisHelper.dispose();
+    
     model.mesh.geometry.dispose();
     if (Array.isArray(model.mesh.material)) {
       model.mesh.material.forEach(mat => mat.dispose());
@@ -138,26 +166,32 @@ export class ModelManager {
     if (this.selectedModelId === id) {
       this.selectedModelId = null;
     }
+    
+    // Update dynamic platform after model removal
+    this.updateDynamicPlatform();
 
     return true;
   }
 
   selectModel(id: string | null): void {
-    // Deselect previous model
+    // Hide axis helper for previously selected model
     if (this.selectedModelId) {
       const prevModel = this.models.get(this.selectedModelId);
       if (prevModel) {
         (prevModel.mesh.material as THREE.MeshPhongMaterial).color.setHex(0x2196f3);
+        prevModel.axisHelper.hide();
       }
     }
 
     this.selectedModelId = id;
 
-    // Highlight selected model
+    // Highlight selected model and show its axis helper
     if (id) {
       const model = this.models.get(id);
       if (model) {
         (model.mesh.material as THREE.MeshPhongMaterial).color.setHex(0xffa500);
+        model.axisHelper.updateForModel(model.mesh);
+        model.axisHelper.show();
       }
     }
   }
@@ -173,7 +207,7 @@ export class ModelManager {
     const newId = `${id}_copy_${Date.now()}`;
     const newModel = this.addModel(newId, `${original.name} (Copy)`, original.originalGeometry);
     
-    // Position the copy slightly offset
+    // Position the copy slightly offset from the original (20mm to the right)
     const newTransform = {
       position: { x: original.transform.position.x + 20, y: original.transform.position.y, z: original.transform.position.z },
       rotation: { ...original.transform.rotation },
@@ -211,7 +245,16 @@ export class ModelManager {
 
     // Update the transform state
     if (transform.position) {
-      model.transform.position = { ...transform.position };
+      // Constrain position to build volume
+      const constrainedPosition = constrainToBuiltVolume(
+        new THREE.Vector3(transform.position.x, transform.position.y, transform.position.z),
+        model.mesh
+      );
+      model.transform.position = { 
+        x: constrainedPosition.x, 
+        y: constrainedPosition.y, 
+        z: constrainedPosition.z 
+      };
     }
     if (transform.rotation) {
       model.transform.rotation = { ...transform.rotation };
@@ -222,6 +265,11 @@ export class ModelManager {
 
     // Update the actual mesh
     this.updateMeshFromTransform(model.mesh, model.transform);
+    
+    // Update axis helper if this model is selected
+    if (this.selectedModelId === id) {
+      model.axisHelper.updateForModel(model.mesh);
+    }
   }
 
   updateModelProperty(id: string, property: 'position' | 'rotation' | 'scale', axis: 'x' | 'y' | 'z', value: number): void {
@@ -231,27 +279,94 @@ export class ModelManager {
     // Update the transform state
     model.transform[property][axis] = value;
 
+    // For position updates, apply build volume constraints
+    if (property === 'position') {
+      const constrainedPosition = constrainToBuiltVolume(
+        new THREE.Vector3(
+          model.transform.position.x,
+          model.transform.position.y,
+          model.transform.position.z
+        ),
+        model.mesh
+      );
+      model.transform.position = {
+        x: constrainedPosition.x,
+        y: constrainedPosition.y,
+        z: constrainedPosition.z
+      };
+    }
+
     // Update the actual mesh
     this.updateMeshFromTransform(model.mesh, model.transform);
+    
+    // Update axis helper if this model is selected
+    if (this.selectedModelId === id) {
+      model.axisHelper.updateForModel(model.mesh);
+    }
   }
 
   resetModelTransform(id: string): void {
     const model = this.models.get(id);
     if (!model || model.locked) return;
 
-    // Reset to default values with position at origin (0, 0, 0) and X rotation at -90 degrees
+    // Reset to auto-positioned values
+    const positioning = positionModelInBuildVolume(model.originalGeometry);
+    
     const defaultTransform: ModelTransform = {
-      position: { x: 0, y: 0, z: 0 },
+      position: { x: positioning.position.x, y: positioning.position.y, z: positioning.position.z },
       rotation: { x: -Math.PI / 2, y: 0, z: 0 },
-      scale: { x: 1, y: 1, z: 1 }
+      scale: { x: positioning.scale.x, y: positioning.scale.y, z: positioning.scale.z }
     };
 
     model.transform = defaultTransform;
     this.updateMeshFromTransform(model.mesh, model.transform);
+    
+    // Update axis helper if this model is selected
+    if (this.selectedModelId === id) {
+      model.axisHelper.updateForModel(model.mesh);
+    }
   }
 
   getAllModels(): ModelData[] {
     return Array.from(this.models.values());
+  }
+
+  setOnModelPositionedCallback(callback: (wasScaled: boolean) => void): void {
+    this.onModelPositionedCallback = callback;
+  }
+
+  /**
+   * Update the dynamic platform based on all loaded models
+   */
+  private updateDynamicPlatform(): void {
+    if (!this.sceneRefs) return;
+    
+    const allModels = Array.from(this.models.values());
+    if (allModels.length === 0) {
+      // Hide platform when no models
+      this.sceneRefs.hidePlatform();
+      return;
+    }
+    
+    // Calculate combined bounding box for all models
+    const combinedBox = new THREE.Box3();
+    allModels.forEach(model => {
+      const modelBox = new THREE.Box3().setFromObject(model.mesh);
+      combinedBox.union(modelBox);
+    });
+    
+    // Update platform to encompass all models
+    this.sceneRefs.updatePlatform(combinedBox);
+    this.sceneRefs.showPlatform();
+  }
+
+  /**
+   * Check if any models are outside the build volume
+   */
+  getModelsOutsideBuildVolume(): ModelData[] {
+    return Array.from(this.models.values()).filter(model => 
+      !isModelWithinBuildVolume(model.mesh)
+    );
   }
 
   private onMouseDown(event: MouseEvent): void {
@@ -300,11 +415,21 @@ export class ModelManager {
       this.raycaster.ray.intersectPlane(buildPlatform, intersection);
       
       const delta = intersection.clone().sub(this.dragStart);
-      const newPosition = this.modelStartPosition.clone().add(delta);
+      const proposedPosition = this.modelStartPosition.clone().add(delta);
+      
+      // Constrain to build volume
+      const constrainedPosition = constrainToBuiltVolume(proposedPosition, selectedModel.mesh);
       
       // Update both mesh and transform state
-      selectedModel.mesh.position.copy(newPosition);
-      selectedModel.transform.position = { x: newPosition.x, y: newPosition.y, z: newPosition.z };
+      selectedModel.mesh.position.copy(constrainedPosition);
+      selectedModel.transform.position = { 
+        x: constrainedPosition.x, 
+        y: constrainedPosition.y, 
+        z: constrainedPosition.z 
+      };
+      
+      // Update axis helper
+      selectedModel.axisHelper.updateForModel(selectedModel.mesh);
     } else {
       // Handle hover effects
       this.raycaster.setFromCamera(this.mouse, this.camera);
@@ -370,6 +495,9 @@ export class ModelManager {
     // Clean up all models
     this.models.forEach(model => {
       this.scene.remove(model.mesh);
+      this.scene.remove(model.axisHelper.getGroup());
+      model.axisHelper.dispose();
+      
       model.mesh.geometry.dispose();
       if (Array.isArray(model.mesh.material)) {
         model.mesh.material.forEach(mat => mat.dispose());

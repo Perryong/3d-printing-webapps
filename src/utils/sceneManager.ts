@@ -1,13 +1,15 @@
 import * as THREE from 'three';
+import { createDynamicBuildPlatform, updateDynamicBuildPlatform, getOptimalCameraPosition, type DynamicPlatformConfig } from './dynamicPlatform';
 
 export interface SceneRefs {
   scene: THREE.Scene;
   camera: THREE.PerspectiveCamera;
   renderer: THREE.WebGLRenderer;
   mesh?: THREE.Mesh;
-  grid?: THREE.Group;
-  showGrid: () => void;
-  hideGrid: () => void;
+  platform?: THREE.Group;
+  updatePlatform: (modelBounds: THREE.Box3) => void;
+  showPlatform: () => void;
+  hidePlatform: () => void;
 }
 
 export interface OrbitControls {
@@ -15,110 +17,33 @@ export interface OrbitControls {
   enabled: boolean;
 }
 
-// Create build platform grid based on Bambu Lab A1 specs (256x256x256mm)
-const createBuildGrid = (): THREE.Group => {
-  const gridGroup = new THREE.Group();
+// Create initial platform for when no models are loaded
+const createInitialPlatform = (): THREE.Group => {
+  const platformGroup = new THREE.Group();
   
-  // Build platform size in mm (converted to units)
-  const buildSize = 256;
-  const gridSize = buildSize;
-  const divisions = 32; // 8mm grid spacing
+  // Small default platform
+  const platformSize = 100;
+  const divisions = 10;
   
-  // Main grid lines at the bottom (build platform level)
-  const gridHelper = new THREE.GridHelper(gridSize, divisions, 0x888888, 0xcccccc);
-  gridHelper.rotateX(Math.PI / 2); // Rotate to XY plane
-  gridHelper.position.z = 0; // Position at the bottom of build volume
-  gridGroup.add(gridHelper);
+  // Create grid
+  const gridHelper = new THREE.GridHelper(platformSize, divisions, 0x888888, 0xcccccc);
+  gridHelper.rotateX(Math.PI / 2);
+  gridHelper.position.z = 0;
+  platformGroup.add(gridHelper);
   
-  // Build volume outline - positioned so bottom is at z=0
-  const outlineGeometry = new THREE.EdgesGeometry(
-    new THREE.BoxGeometry(buildSize, buildSize, buildSize)
-  );
-  const outlineMaterial = new THREE.LineBasicMaterial({ 
-    color: 0x4a90e2, 
-    transparent: true, 
-    opacity: 0.3 
-  });
-  const outline = new THREE.LineSegments(outlineGeometry, outlineMaterial);
-  outline.position.z = buildSize / 2; // Move up so bottom edge is at z=0
-  gridGroup.add(outline);
-  
-  // Build platform (bottom face) at z=0
-  const platformGeometry = new THREE.PlaneGeometry(buildSize, buildSize);
-  const platformMaterial = new THREE.MeshBasicMaterial({ 
-    color: 0xf0f0f0, 
-    transparent: true, 
+  // Create platform surface
+  const platformGeometry = new THREE.PlaneGeometry(platformSize, platformSize);
+  const platformMaterial = new THREE.MeshBasicMaterial({
+    color: 0xf0f0f0,
+    transparent: true,
     opacity: 0.1,
     side: THREE.DoubleSide
   });
   const platform = new THREE.Mesh(platformGeometry, platformMaterial);
-  platform.position.z = 0; // Build platform at bottom
-  gridGroup.add(platform);
+  platform.position.z = 0;
+  platformGroup.add(platform);
   
-  // Add axis indicators with labels
-  const axisLength = buildSize / 2;
-  
-  // X-axis (Red)
-  const xGeometry = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(0, 0, 0),
-    new THREE.Vector3(axisLength, 0, 0)
-  ]);
-  const xMaterial = new THREE.LineBasicMaterial({ color: 0xff0000 });
-  const xAxis = new THREE.Line(xGeometry, xMaterial);
-  gridGroup.add(xAxis);
-  
-  // Y-axis (Green)
-  const yGeometry = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(0, 0, 0),
-    new THREE.Vector3(0, axisLength, 0)
-  ]);
-  const yMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
-  const yAxis = new THREE.Line(yGeometry, yMaterial);
-  gridGroup.add(yAxis);
-  
-  // Z-axis (Blue)
-  const zGeometry = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(0, 0, 0),
-    new THREE.Vector3(0, 0, axisLength)
-  ]);
-  const zMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff });
-  const zAxis = new THREE.Line(zGeometry, zMaterial);
-  gridGroup.add(zAxis);
-  
-  // Create axis labels using CSS2DRenderer-style labels
-  const createAxisLabel = (text: string, position: THREE.Vector3, color: string) => {
-    const canvas = document.createElement('canvas');
-    const context = canvas.getContext('2d')!;
-    canvas.width = 64;
-    canvas.height = 32;
-    
-    context.fillStyle = color;
-    context.font = 'Bold 20px Arial';
-    context.textAlign = 'center';
-    context.fillText(text, 32, 20);
-    
-    const texture = new THREE.CanvasTexture(canvas);
-    const spriteMaterial = new THREE.SpriteMaterial({ map: texture });
-    const sprite = new THREE.Sprite(spriteMaterial);
-    sprite.position.copy(position);
-    sprite.scale.set(20, 10, 1);
-    
-    return sprite;
-  };
-  
-  // Add axis labels
-  const xLabel = createAxisLabel('X', new THREE.Vector3(axisLength + 20, 0, 0), '#ff0000');
-  const yLabel = createAxisLabel('Y', new THREE.Vector3(0, axisLength + 20, 0), '#00ff00');
-  const zLabel = createAxisLabel('Z', new THREE.Vector3(0, 0, axisLength + 20), '#0000ff');
-  
-  gridGroup.add(xLabel);
-  gridGroup.add(yLabel);
-  gridGroup.add(zLabel);
-  
-  // Rotate the entire grid group clockwise by 90 degrees around X-axis
-  gridGroup.rotation.x = -Math.PI / 2; // -90 degrees for clockwise rotation around X-axis
-  
-  return gridGroup;
+  return platformGroup;
 };
 
 export const createScene = (container: HTMLElement): { refs: SceneRefs; controls: OrbitControls; animate: () => void } => {
@@ -163,9 +88,9 @@ export const createScene = (container: HTMLElement): { refs: SceneRefs; controls
   directionalLight2.position.set(-200, -200, 100);
   scene.add(directionalLight2);
 
-  // Create build grid but don't add it to the scene initially
-  const grid = createBuildGrid();
-  grid.visible = false;
+  // Create initial platform
+  const platform = createInitialPlatform();
+  platform.visible = false;
 
   // Camera rotation variables
   let isRotating = false;
@@ -266,17 +191,30 @@ export const createScene = (container: HTMLElement): { refs: SceneRefs; controls
     scene,
     camera,
     renderer,
-    grid,
+    platform,
     get mesh() { return meshRef || undefined; },
     set mesh(mesh: THREE.Mesh | undefined) { meshRef = mesh || null; },
-    showGrid: () => {
-      if (!scene.children.includes(grid)) {
-        scene.add(grid);
-      }
-      grid.visible = true;
+    updatePlatform: (modelBounds: THREE.Box3) => {
+      const config: DynamicPlatformConfig = {
+        modelBounds,
+        padding: 50,
+        gridSpacing: 10
+      };
+      updateDynamicBuildPlatform(platform, config);
+      
+      // Update camera to optimal position
+      const optimalCameraPos = getOptimalCameraPosition(modelBounds);
+      camera.position.copy(optimalCameraPos);
+      camera.lookAt(modelBounds.getCenter(new THREE.Vector3()));
     },
-    hideGrid: () => {
-      grid.visible = false;
+    showPlatform: () => {
+      if (!scene.children.includes(platform)) {
+        scene.add(platform);
+      }
+      platform.visible = true;
+    },
+    hidePlatform: () => {
+      platform.visible = false;
     }
   };
 

@@ -20,7 +20,8 @@ import { estimatePrintTime, PrintSettings, PrintEstimate } from '../utils/printE
 import { analyzeGCode, GCodeAnalysis } from '../utils/gcodeAnalyzer';
 import { createScene, SceneRefs, OrbitControls } from '../utils/sceneManager';
 import { ModelManager, ModelData } from '../utils/modelManager';
-import { calculateMeshVolume, convertMmToCm } from '@/utils/stlVolumeCalculator';
+import { calculateMeshVolume, convertMmToCm } from '../utils/stlVolumeCalculator';
+
 
 // Services
 import { uploadFileToStorage } from '../services/firebaseStorage';
@@ -82,8 +83,8 @@ const STLViewer: React.FC = () => {
       sceneRefs.current = refs;
       controlsRef.current = controls;
       
-      // Initialize model manager
-      modelManagerRef.current = new ModelManager(refs.scene, refs.camera, refs.renderer);
+      // Initialize model manager with scene refs for dynamic platform
+      modelManagerRef.current = new ModelManager(refs.scene, refs.camera, refs.renderer, refs);
       
       animate();
       
@@ -153,8 +154,8 @@ const STLViewer: React.FC = () => {
         throw new Error('Scene not initialized');
       }
 
-      // Show the grid when file is uploaded
-      sceneRefs.current.showGrid();
+      // Show the platform when file is uploaded
+      sceneRefs.current.showPlatform();
 
       // Create unique model ID
       const modelId = `model_${Date.now()}`;
@@ -224,9 +225,9 @@ const STLViewer: React.FC = () => {
       setFileName(file.name);
       setSlicingMethod('gcode');
       
-      // Show grid for G-code files too
+      // Show platform for G-code files too
       if (sceneRefs.current) {
-        sceneRefs.current.showGrid();
+        sceneRefs.current.showPlatform();
       }
     } catch (err) {
       setError('Failed to analyze G-code file');
@@ -390,14 +391,19 @@ const STLViewer: React.FC = () => {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
+      // Cleanup model manager first (handles all model resources)
+      if (modelManagerRef.current) {
+        modelManagerRef.current.dispose();
+      }
+      
+      // Cleanup controls
+      if (controlsRef.current) {
+        controlsRef.current.dispose();
+      }
+      
+      // Remove renderer from DOM and cleanup
       if (sceneRefs.current?.renderer && sceneRefs.current.renderer.domElement.parentNode) {
         sceneRefs.current.renderer.domElement.parentNode.removeChild(sceneRefs.current.renderer.domElement);
-      }
-      if (sceneRefs.current?.mesh) {
-        sceneRefs.current.mesh.geometry.dispose();
-        sceneRefs.current.mesh.material.dispose();
-      }
-      if (sceneRefs.current?.renderer) {
         sceneRefs.current.renderer.dispose();
       }
     };
