@@ -28,6 +28,7 @@ export class ModelManager {
   private isHovering = false;
   private hoveredModelId: string | null = null;
   private originalTransformMode: 'select' | 'move' | 'rotate' | 'scale' = 'select';
+  private repositionGridCallback?: (x: number, y: number, z: number) => void;
 
   constructor(
     private scene: THREE.Scene,
@@ -36,6 +37,10 @@ export class ModelManager {
   ) {
     this.setupEventListeners();
     this.setupCursorStyles();
+  }
+
+  setGridRepositionCallback(callback: (x: number, y: number, z: number) => void): void {
+    this.repositionGridCallback = callback;
   }
 
   private setupEventListeners() {
@@ -99,13 +104,18 @@ export class ModelManager {
     mesh.receiveShadow = true;
     mesh.userData.modelId = id;
 
-    // Set default position to origin (0, 0, 0)
-    mesh.position.set(0, 0, 0);
+    // Set position to specified starting coordinates
+    mesh.position.set(122.0, 0.0, 100.0);
     
     // Set default rotation with X at -90 degrees
     mesh.rotation.set(-Math.PI / 2, 0, 0); // -90 degrees in radians for X axis
 
     this.scene.add(mesh);
+
+    // If this is the first model, reposition the grid to match the model's position
+    if (this.models.size === 0 && this.repositionGridCallback) {
+      this.repositionGridCallback(mesh.position.x, mesh.position.y, mesh.position.z);
+    }
 
     const modelData: ModelData = {
       id,
@@ -173,9 +183,9 @@ export class ModelManager {
     const newId = `${id}_copy_${Date.now()}`;
     const newModel = this.addModel(newId, `${original.name} (Copy)`, original.originalGeometry);
     
-    // Position the copy slightly offset
+    // Position the copy with offset from base coordinates
     const newTransform = {
-      position: { x: original.transform.position.x + 20, y: original.transform.position.y, z: original.transform.position.z },
+      position: { x: 122.0 + 20, y: 0.0, z: 100.0 },
       rotation: { ...original.transform.rotation },
       scale: { ...original.transform.scale }
     };
@@ -239,9 +249,9 @@ export class ModelManager {
     const model = this.models.get(id);
     if (!model || model.locked) return;
 
-    // Reset to default values with position at origin (0, 0, 0) and X rotation at -90 degrees
+    // Reset to default values with position at specified coordinates and X rotation at -90 degrees
     const defaultTransform: ModelTransform = {
-      position: { x: 0, y: 0, z: 0 },
+      position: { x: 122.0, y: 0.0, z: 100.0 },
       rotation: { x: -Math.PI / 2, y: 0, z: 0 },
       scale: { x: 1, y: 1, z: 1 }
     };

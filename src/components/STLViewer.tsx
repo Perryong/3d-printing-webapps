@@ -20,7 +20,7 @@ import { estimatePrintTime, PrintSettings, PrintEstimate } from '../utils/printE
 import { analyzeGCode, GCodeAnalysis } from '../utils/gcodeAnalyzer';
 import { createScene, SceneRefs, OrbitControls } from '../utils/sceneManager';
 import { ModelManager, ModelData } from '../utils/modelManager';
-import { calculateMeshVolume, convertMmToCm } from '@/utils/stlVolumeCalculator';
+import { calculateMeshVolume, convertMmToCm } from '../utils/stlVolumeCalculator';
 
 // Services
 import { uploadFileToStorage } from '../services/firebaseStorage';
