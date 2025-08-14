@@ -19,18 +19,16 @@ export interface OrbitControls {
 const createBuildGrid = (): THREE.Group => {
   const gridGroup = new THREE.Group();
   
-  // Build platform size in mm (converted to units)
+  // Build platform size in mm
   const buildSize = 256;
-  const gridSize = buildSize;
   const divisions = 32; // 8mm grid spacing
   
   // Main grid lines at the bottom (build platform level)
-  const gridHelper = new THREE.GridHelper(gridSize, divisions, 0x888888, 0xcccccc);
-  gridHelper.rotateX(Math.PI / 2); // Rotate to XY plane
-  gridHelper.position.z = 0; // Position at the bottom of build volume
+  const gridHelper = new THREE.GridHelper(buildSize, divisions, 0x888888, 0xcccccc);
+  gridHelper.position.y = 0; // Position at build platform level
   gridGroup.add(gridHelper);
   
-  // Build volume outline - positioned so bottom is at z=0
+  // Build volume outline
   const outlineGeometry = new THREE.EdgesGeometry(
     new THREE.BoxGeometry(buildSize, buildSize, buildSize)
   );
@@ -40,10 +38,10 @@ const createBuildGrid = (): THREE.Group => {
     opacity: 0.3 
   });
   const outline = new THREE.LineSegments(outlineGeometry, outlineMaterial);
-  outline.position.z = buildSize / 2; // Move up so bottom edge is at z=0
+  outline.position.z = buildSize / 2; // Center the outline vertically
   gridGroup.add(outline);
   
-  // Build platform (bottom face) at z=0
+  // Build platform (bottom face) at y=0
   const platformGeometry = new THREE.PlaneGeometry(buildSize, buildSize);
   const platformMaterial = new THREE.MeshBasicMaterial({ 
     color: 0xf0f0f0, 
@@ -52,10 +50,11 @@ const createBuildGrid = (): THREE.Group => {
     side: THREE.DoubleSide
   });
   const platform = new THREE.Mesh(platformGeometry, platformMaterial);
-  platform.position.z = 0; // Build platform at bottom
+  platform.rotation.x = -Math.PI / 2; // Rotate to be horizontal
+  platform.position.y = 0; // At build platform level
   gridGroup.add(platform);
   
-  // Add axis indicators with labels
+  // Add axis indicators
   const axisLength = buildSize / 2;
   
   // X-axis (Red)
@@ -67,25 +66,25 @@ const createBuildGrid = (): THREE.Group => {
   const xAxis = new THREE.Line(xGeometry, xMaterial);
   gridGroup.add(xAxis);
   
-  // Y-axis (Green)
+  // Y-axis (Green) - pointing up
   const yGeometry = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(0, 0, 0),
-    new THREE.Vector3(0, axisLength, 0)
+    new THREE.Vector3(0, 0, axisLength)
   ]);
   const yMaterial = new THREE.LineBasicMaterial({ color: 0x00ff00 });
   const yAxis = new THREE.Line(yGeometry, yMaterial);
   gridGroup.add(yAxis);
   
-  // Z-axis (Blue)
+  // Z-axis (Blue) - pointing forward
   const zGeometry = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(0, 0, 0),
-    new THREE.Vector3(0, 0, axisLength)
+    new THREE.Vector3(0, axisLength, 0)
   ]);
   const zMaterial = new THREE.LineBasicMaterial({ color: 0x0000ff });
   const zAxis = new THREE.Line(zGeometry, zMaterial);
   gridGroup.add(zAxis);
   
-  // Create axis labels using CSS2DRenderer-style labels
+  // Create axis labels
   const createAxisLabel = (text: string, position: THREE.Vector3, color: string) => {
     const canvas = document.createElement('canvas');
     const context = canvas.getContext('2d')!;
@@ -108,15 +107,12 @@ const createBuildGrid = (): THREE.Group => {
   
   // Add axis labels
   const xLabel = createAxisLabel('X', new THREE.Vector3(axisLength + 20, 0, 0), '#ff0000');
-  const yLabel = createAxisLabel('Y', new THREE.Vector3(0, axisLength + 20, 0), '#00ff00');
-  const zLabel = createAxisLabel('Z', new THREE.Vector3(0, 0, axisLength + 20), '#0000ff');
+  const yLabel = createAxisLabel('Y', new THREE.Vector3(0, 0, axisLength + 20), '#00ff00');
+  const zLabel = createAxisLabel('Z', new THREE.Vector3(0, axisLength + 20, 0), '#0000ff');
   
   gridGroup.add(xLabel);
   gridGroup.add(yLabel);
   gridGroup.add(zLabel);
-  
-  // Rotate the entire grid group clockwise by 90 degrees around X-axis
-  gridGroup.rotation.x = -Math.PI / 2; // -90 degrees for clockwise rotation around X-axis
   
   return gridGroup;
 };
@@ -129,9 +125,10 @@ export const createScene = (container: HTMLElement): { refs: SceneRefs; controls
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0xffffff);
 
-  // Camera
+  // Camera with proper initial positioning
   const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 2000);
-  camera.position.set(200, 200, 200);
+  camera.position.set(300, 300, 200); // Better initial position
+  camera.lookAt(0, 0, 50); // Look at center of build volume
 
   // Renderer
   const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -142,11 +139,11 @@ export const createScene = (container: HTMLElement): { refs: SceneRefs; controls
 
   container.appendChild(renderer.domElement);
 
-  // Lighting optimized for white background
-  const ambientLight = new THREE.AmbientLight(0x404040, 0.8);
+  // Improved lighting setup
+  const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
   scene.add(ambientLight);
 
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
   directionalLight.position.set(200, 200, 200);
   directionalLight.castShadow = true;
   directionalLight.shadow.mapSize.width = 2048;
@@ -159,15 +156,16 @@ export const createScene = (container: HTMLElement): { refs: SceneRefs; controls
   directionalLight.shadow.camera.bottom = -300;
   scene.add(directionalLight);
 
-  const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.6);
-  directionalLight2.position.set(-200, -200, 100);
-  scene.add(directionalLight2);
+  // Additional fill light
+  const fillLight = new THREE.DirectionalLight(0xffffff, 0.4);
+  fillLight.position.set(-200, -200, 100);
+  scene.add(fillLight);
 
-  // Create build grid but don't add it to the scene initially
+  // Create build grid
   const grid = createBuildGrid();
   grid.visible = false;
 
-  // Camera rotation variables
+  // Camera controls
   let isRotating = false;
   let mouseX = 0;
   let mouseY = 0;
@@ -178,7 +176,6 @@ export const createScene = (container: HTMLElement): { refs: SceneRefs; controls
   let meshRef: THREE.Mesh | null = null;
 
   const handleMouseDown = (event: MouseEvent) => {
-    // Only enable camera rotation when right mouse button is pressed or when holding Ctrl
     if (event.button === 2 || event.ctrlKey) {
       isRotating = true;
       mouseX = event.clientX;
@@ -192,9 +189,11 @@ export const createScene = (container: HTMLElement): { refs: SceneRefs; controls
     const deltaX = event.clientX - mouseX;
     const deltaY = event.clientY - mouseY;
     
-    // Rotate camera around the scene
     targetRotationY += deltaX * 0.01;
     targetRotationX += deltaY * 0.01;
+    
+    // Clamp vertical rotation
+    targetRotationX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, targetRotationX));
     
     mouseX = event.clientX;
     mouseY = event.clientY;
@@ -206,13 +205,17 @@ export const createScene = (container: HTMLElement): { refs: SceneRefs; controls
 
   const handleWheel = (event: WheelEvent) => {
     event.preventDefault();
-    const delta = event.deltaY * 0.01;
-    camera.position.multiplyScalar(1 + delta * 0.1);
-    camera.position.clampLength(50, 800);
+    const delta = event.deltaY * 0.001;
+    const distance = camera.position.length();
+    const newDistance = Math.max(50, Math.min(1000, distance * (1 + delta)));
+    
+    // Maintain camera direction while changing distance
+    const direction = camera.position.clone().normalize();
+    camera.position.copy(direction.multiplyScalar(newDistance));
   };
 
   const handleContextMenu = (event: MouseEvent) => {
-    event.preventDefault(); // Prevent right-click context menu
+    event.preventDefault();
   };
 
   renderer.domElement.addEventListener('mousedown', handleMouseDown);
@@ -236,16 +239,15 @@ export const createScene = (container: HTMLElement): { refs: SceneRefs; controls
   const animate = () => {
     requestAnimationFrame(animate);
     
-    // Smooth camera rotation
+    // Smooth camera rotation around the center point
     currentRotationX += (targetRotationX - currentRotationX) * 0.1;
     currentRotationY += (targetRotationY - currentRotationY) * 0.1;
     
-    // Apply rotation to camera position around the origin
-    const radius = camera.position.length();
-    camera.position.x = radius * Math.sin(currentRotationY) * Math.cos(currentRotationX);
-    camera.position.y = radius * Math.sin(currentRotationX);
-    camera.position.z = radius * Math.cos(currentRotationY) * Math.cos(currentRotationX);
-    camera.lookAt(0, 0, 50); // Look at the center of the build platform
+    const distance = camera.position.length();
+    camera.position.x = distance * Math.sin(currentRotationY) * Math.cos(currentRotationX);
+    camera.position.z = distance * Math.sin(currentRotationX);
+    camera.position.y = distance * Math.cos(currentRotationY) * Math.cos(currentRotationX);
+    camera.lookAt(0, 0, 50); // Look at center of build volume
     
     renderer.render(scene, camera);
   };

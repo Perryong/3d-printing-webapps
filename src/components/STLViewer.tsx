@@ -156,7 +156,7 @@ const STLViewer: React.FC = () => {
       // Show the grid when file is uploaded
       sceneRefs.current.showGrid();
 
-      // Create unique model ID
+      // Create unique model ID and add model with optimal positioning
       const modelId = `model_${Date.now()}`;
       const modelData = modelManagerRef.current.addModel(modelId, file.name, geometry);
       
@@ -164,18 +164,6 @@ const STLViewer: React.FC = () => {
       setModels(prev => [...prev, modelData]);
       setSelectedModelId(modelId);
       modelManagerRef.current.selectModel(modelId);
-      
-      // Adjust camera for better view
-      geometry.computeBoundingBox();
-      const box = geometry.boundingBox!;
-      const size = box.getSize(new THREE.Vector3());
-      const maxDim = Math.max(size.x, size.y, size.z);
-      sceneRefs.current.camera.position.set(
-        maxDim * 1.5, 
-        maxDim * 1.5, 
-        maxDim * 1.5
-      );
-      sceneRefs.current.camera.lookAt(0, 0, size.z / 2);
       
       // Calculate actual mesh volume using proper geometry calculation
       const volumeMm3 = calculateMeshVolume(geometry);
@@ -348,19 +336,13 @@ const STLViewer: React.FC = () => {
   // Camera controls updated for bottom-positioned grid
   const resetCamera = useCallback(() => {
     if (sceneRefs.current?.camera) {
-      if (sceneRefs.current?.mesh) {
-        const box = new THREE.Box3().setFromObject(sceneRefs.current.mesh);
-        const size = box.getSize(new THREE.Vector3());
-        const maxDim = Math.max(size.x, size.y, size.z);
-        sceneRefs.current.camera.position.set(
-          maxDim * 1.5, 
-          maxDim * 1.5, 
-          maxDim * 1.5
-        );
-        sceneRefs.current.camera.lookAt(0, 0, size.z / 2);
+      // Use model manager to fit camera to all models
+      if (modelManagerRef.current) {
+        modelManagerRef.current.fitCameraToModels();
       } else {
-        sceneRefs.current.camera.position.set(200, 200, 200);
-        sceneRefs.current.camera.lookAt(0, 0, 50); // Look slightly above the build platform
+        // Default camera position
+        sceneRefs.current.camera.position.set(300, 300, 200);
+        sceneRefs.current.camera.lookAt(0, 0, 50);
       }
     }
   }, []);
@@ -533,6 +515,14 @@ const STLViewer: React.FC = () => {
                   <span><span className="font-semibold">Size:</span> {modelInfo.size.x} × {modelInfo.size.y} × {modelInfo.size.z} mm</span>
                   <span><span className="font-semibold">Volume:</span> {modelInfo.volume} cm³</span>
                 </>
+              )}
+              {models.length > 1 && (
+                <button
+                  onClick={() => modelManagerRef.current?.centerAllModels()}
+                  className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs"
+                >
+                  Center All
+                </button>
               )}
             </div>
           </div>

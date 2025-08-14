@@ -14,6 +14,7 @@ export interface ModelData {
   locked: boolean;
   originalGeometry: THREE.BufferGeometry;
   transform: ModelTransform;
+  boundingBox: THREE.Box3;
 }
 
 export class ModelManager {
@@ -29,6 +30,7 @@ export class ModelManager {
   private hoveredModelId: string | null = null;
   private originalTransformMode: 'select' | 'move' | 'rotate' | 'scale' = 'select';
   private repositionGridCallback?: (x: number, y: number, z: number) => void;
+  private buildPlatformSize = 256; // Bambu Lab A1 build volume
 
   constructor(
     private scene: THREE.Scene,
@@ -51,7 +53,6 @@ export class ModelManager {
   }
 
   private setupCursorStyles() {
-    // Add CSS for cursor styles
     const style = document.createElement('style');
     style.textContent = `
       .model-hover { cursor: grab !important; }
@@ -92,6 +93,76 @@ export class ModelManager {
     mesh.scale.set(transform.scale.x, transform.scale.y, transform.scale.z);
   }
 
+  /**
+   * Calculate optimal positioning for a model on the build platform
+   * Based on grid-apps positioning algorithms
+   */
+  private calculateOptimalPosition(geometry: THREE.BufferGeometry): { position: THREE.Vector3; rotation: THREE.Euler } {
+    // Compute bounding box
+    geometry.computeBoundingBox();
+    const boundingBox = geometry.boundingBox!;
+    const size = boundingBox.getSize(new THREE.Vector3());
+    const center = boundingBox.getCenter(new THREE.Vector3());
+
+    // Position model at center of build platform
+    const position = new THREE.Vector3(0, 0, 0);
+    
+    // Adjust Z position so model sits on build platform
+    // Move model up by half its height minus the bottom offset
+    position.z = size.z / 2 - boundingBox.min.z;
+
+    // Default rotation - models typically need to be rotated for proper orientation
+    const rotation = new THREE.Euler(-Math.PI / 2, 0, 0); // -90 degrees around X-axis
+
+    return { position, rotation };
+  }
+
+  /**
+   * Auto-scale model to fit within build volume if too large
+   */
+  private calculateOptimalScale(geometry: THREE.BufferGeometry): number {
+    geometry.computeBoundingBox();
+    const boundingBox = geometry.boundingBox!;
+    const size = boundingBox.getSize(new THREE.Vector3());
+    
+    // Calculate maximum dimension
+    const maxDimension = Math.max(size.x, size.y, size.z);
+    
+    // If model is larger than 80% of build platform, scale it down
+    const maxAllowedSize = this.buildPlatformSize * 0.8;
+    
+    if (maxDimension > maxAllowedSize) {
+      return maxAllowedSize / maxDimension;
+    }
+    
+    return 1.0; // No scaling needed
+  }
+
+  /**
+   * Position camera to optimally view the model
+   */
+  private positionCameraForModel(boundingBox: THREE.Box3): void {
+    const size = boundingBox.getSize(new THREE.Vector3());
+    const center = boundingBox.getCenter(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    
+    // Calculate camera distance based on model size
+    const distance = maxDim * 2.5; // Adjust multiplier as needed
+    
+    // Position camera at an angle that shows the model well
+    const cameraPosition = new THREE.Vector3(
+      center.x + distance * 0.7,
+      center.y + distance * 0.7,
+      center.z + distance * 0.7
+    );
+    
+    if (this.camera instanceof THREE.PerspectiveCamera) {
+      this.camera.position.copy(cameraPosition);
+      this.camera.lookAt(center);
+      this.camera.updateProjectionMatrix();
+    }
+  }
+
   addModel(id: string, name: string, geometry: THREE.BufferGeometry): ModelData {
     const material = new THREE.MeshPhongMaterial({
       color: 0x2196f3,
@@ -104,17 +175,26 @@ export class ModelManager {
     mesh.receiveShadow = true;
     mesh.userData.modelId = id;
 
-    // Set position to specified starting coordinates
-    mesh.position.set(122.0, 0.0, 100.0);
-    
-    // Set default rotation with X at -90 degrees
-    mesh.rotation.set(-Math.PI / 2, 0, 0); // -90 degrees in radians for X axis
+    // Calculate optimal positioning and scaling
+    const { position, rotation } = this.calculateOptimalPosition(geometry);
+    const optimalScale = this.calculateOptimalScale(geometry);
+
+    // Apply positioning
+    mesh.position.copy(position);
+    mesh.rotation.copy(rotation);
+    mesh.scale.setScalar(optimalScale);
+
+    // Compute final bounding box after transformations
+    const boundingBox = new THREE.Box3().setFromObject(mesh);
 
     this.scene.add(mesh);
 
-    // If this is the first model, reposition the grid to match the model's position
+    // Position camera for optimal viewing
+    this.positionCameraForModel(boundingBox);
+
+    // If this is the first model, show the grid
     if (this.models.size === 0 && this.repositionGridCallback) {
-      this.repositionGridCallback(mesh.position.x, mesh.position.y, mesh.position.z);
+      this.repositionGridCallback(0, 0, 0); // Grid centered at origin
     }
 
     const modelData: ModelData = {
@@ -124,7 +204,8 @@ export class ModelManager {
       visible: true,
       locked: false,
       originalGeometry: geometry.clone(),
-      transform: this.meshToTransform(mesh)
+      transform: this.meshToTransform(mesh),
+      boundingBox
     };
 
     this.models.set(id, modelData);
@@ -183,9 +264,14 @@ export class ModelManager {
     const newId = `${id}_copy_${Date.now()}`;
     const newModel = this.addModel(newId, `${original.name} (Copy)`, original.originalGeometry);
     
-    // Position the copy with offset from base coordinates
+    // Position the copy with offset
+    const offset = 30; // 30mm offset
     const newTransform = {
-      position: { x: 122.0 + 20, y: 0.0, z: 100.0 },
+      position: { 
+        x: original.transform.position.x + offset, 
+        y: original.transform.position.y, 
+        z: original.transform.position.z 
+      },
       rotation: { ...original.transform.rotation },
       scale: { ...original.transform.scale }
     };
@@ -232,6 +318,9 @@ export class ModelManager {
 
     // Update the actual mesh
     this.updateMeshFromTransform(model.mesh, model.transform);
+    
+    // Update bounding box
+    model.boundingBox.setFromObject(model.mesh);
   }
 
   updateModelProperty(id: string, property: 'position' | 'rotation' | 'scale', axis: 'x' | 'y' | 'z', value: number): void {
@@ -243,21 +332,85 @@ export class ModelManager {
 
     // Update the actual mesh
     this.updateMeshFromTransform(model.mesh, model.transform);
+    
+    // Update bounding box
+    model.boundingBox.setFromObject(model.mesh);
   }
 
   resetModelTransform(id: string): void {
     const model = this.models.get(id);
     if (!model || model.locked) return;
 
-    // Reset to default values with position at specified coordinates and X rotation at -90 degrees
+    // Recalculate optimal positioning
+    const { position, rotation } = this.calculateOptimalPosition(model.originalGeometry);
+    const optimalScale = this.calculateOptimalScale(model.originalGeometry);
+
     const defaultTransform: ModelTransform = {
-      position: { x: 122.0, y: 0.0, z: 100.0 },
-      rotation: { x: -Math.PI / 2, y: 0, z: 0 },
-      scale: { x: 1, y: 1, z: 1 }
+      position: { x: position.x, y: position.y, z: position.z },
+      rotation: { x: rotation.x, y: rotation.y, z: rotation.z },
+      scale: { x: optimalScale, y: optimalScale, z: optimalScale }
     };
 
     model.transform = defaultTransform;
     this.updateMeshFromTransform(model.mesh, model.transform);
+    
+    // Update bounding box
+    model.boundingBox.setFromObject(model.mesh);
+  }
+
+  /**
+   * Center all models on the build platform
+   */
+  centerAllModels(): void {
+    if (this.models.size === 0) return;
+
+    // Calculate combined bounding box of all visible models
+    const combinedBox = new THREE.Box3();
+    let hasVisibleModels = false;
+
+    this.models.forEach(model => {
+      if (model.visible) {
+        combinedBox.expandByObject(model.mesh);
+        hasVisibleModels = true;
+      }
+    });
+
+    if (!hasVisibleModels) return;
+
+    const center = combinedBox.getCenter(new THREE.Vector3());
+    const offset = new THREE.Vector3(-center.x, -center.y, 0); // Keep Z as is
+
+    // Move all models by the offset
+    this.models.forEach(model => {
+      if (model.visible && !model.locked) {
+        model.mesh.position.add(offset);
+        model.transform.position.x = model.mesh.position.x;
+        model.transform.position.y = model.mesh.position.y;
+        model.transform.position.z = model.mesh.position.z;
+        model.boundingBox.setFromObject(model.mesh);
+      }
+    });
+  }
+
+  /**
+   * Fit camera to show all models
+   */
+  fitCameraToModels(): void {
+    if (this.models.size === 0) return;
+
+    const combinedBox = new THREE.Box3();
+    let hasVisibleModels = false;
+
+    this.models.forEach(model => {
+      if (model.visible) {
+        combinedBox.expandByObject(model.mesh);
+        hasVisibleModels = true;
+      }
+    });
+
+    if (hasVisibleModels) {
+      this.positionCameraForModel(combinedBox);
+    }
   }
 
   getAllModels(): ModelData[] {
@@ -277,14 +430,13 @@ export class ModelManager {
       const model = this.models.get(modelId);
       
       if (model && !model.locked) {
-        // Auto-switch to move mode when starting to drag
         this.originalTransformMode = this.transformMode;
         this.transformMode = 'move';
         
         this.selectModel(modelId);
         this.isDragging = true;
         
-        // Calculate intersection with build platform
+        // Calculate intersection with build platform (Z=0 plane)
         const buildPlatform = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
         const intersection = new THREE.Vector3();
         this.raycaster.ray.intersectPlane(buildPlatform, intersection);
@@ -312,9 +464,15 @@ export class ModelManager {
       const delta = intersection.clone().sub(this.dragStart);
       const newPosition = this.modelStartPosition.clone().add(delta);
       
+      // Keep model within build platform bounds
+      const halfPlatform = this.buildPlatformSize / 2;
+      newPosition.x = Math.max(-halfPlatform, Math.min(halfPlatform, newPosition.x));
+      newPosition.y = Math.max(-halfPlatform, Math.min(halfPlatform, newPosition.y));
+      
       // Update both mesh and transform state
       selectedModel.mesh.position.copy(newPosition);
       selectedModel.transform.position = { x: newPosition.x, y: newPosition.y, z: newPosition.z };
+      selectedModel.boundingBox.setFromObject(selectedModel.mesh);
     } else {
       // Handle hover effects
       this.raycaster.setFromCamera(this.mouse, this.camera);
@@ -330,7 +488,6 @@ export class ModelManager {
         this.hoveredModelId = null;
       }
       
-      // Update cursor if hover state changed
       if (previousHoveredId !== this.hoveredModelId) {
         this.updateCursor();
       }
@@ -339,7 +496,6 @@ export class ModelManager {
 
   private onMouseUp(): void {
     if (this.isDragging) {
-      // Restore original transform mode after dragging
       this.transformMode = this.originalTransformMode;
       this.isDragging = false;
       this.updateCursor();
@@ -347,7 +503,6 @@ export class ModelManager {
   }
 
   private onMouseClick(event: MouseEvent): void {
-    // Only handle selection if we're not dragging and in select mode
     if (this.transformMode !== 'select' && !this.isDragging) return;
 
     this.updateMousePosition(event);
