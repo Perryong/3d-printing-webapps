@@ -10,12 +10,18 @@ interface PrintTimeDisplayProps {
   estimate: PrintEstimate | GCodeAnalysis | null;
   slicingMethod: 'simplified' | 'gcode';
   modelVolume?: number;
+  cameraAzimuth?: number;
+  cameraElevation?: number;
+  isCameraRotating?: boolean;
 }
 
 const PrintTimeDisplay: React.FC<PrintTimeDisplayProps> = ({ 
   estimate, 
   slicingMethod,
-  modelVolume = 0
+  modelVolume = 0,
+  cameraAzimuth = 0,
+  cameraElevation = 0,
+  isCameraRotating = false
 }) => {
   if (!estimate) return null;
 
@@ -62,6 +68,9 @@ const PrintTimeDisplay: React.FC<PrintTimeDisplayProps> = ({
           printTime={estimate.totalTime}
           modelWeight={modelWeight}
           modelVolume={modelVolume}
+          cameraAzimuth={cameraAzimuth}
+          cameraElevation={cameraElevation}
+          isCameraRotating={isCameraRotating}
         />
       )}
     </div>
