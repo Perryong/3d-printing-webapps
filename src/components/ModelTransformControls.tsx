@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useCallback } from 'react';
 import { Move, RotateCw, Scale, Copy, Trash2, RotateCcw } from 'lucide-react';
 
 interface ModelTransformControlsProps {
@@ -33,13 +33,8 @@ const ModelTransformControls: React.FC<ModelTransformControlsProps> = ({
   onRotationChange,
   onScaleChange
 }) => {
-  if (!selectedModel) {
-    return (
-      <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 text-gray-400 text-center">
-        Select a model to see transform controls
-      </div>
-    );
-  }
+  // Local state for input fields during editing - MUST be at top before any conditional returns
+  const [editingInputs, setEditingInputs] = useState<{[key: string]: string}>({});
 
   // Safe conversion from radians to degrees with fallback values
   const safeRotationToDegrees = (radians: number): number => {
@@ -64,6 +59,68 @@ const ModelTransformControls: React.FC<ModelTransformControlsProps> = ({
     }
     return value.toFixed(decimals);
   };
+
+  // Generic input handler that manages local state and commits on blur/enter - MUST be at top
+  const createInputHandler = useCallback((
+    type: 'position' | 'rotation' | 'scale',
+    axis: 'x' | 'y' | 'z',
+    onChange: (axis: 'x' | 'y' | 'z', value: number) => void,
+    converter?: (value: number) => number
+  ) => {
+    const inputKey = `${type}-${axis}`;
+    
+    return {
+      value: editingInputs[inputKey] ?? (() => {
+        let currentValue;
+        if (type === 'position') currentValue = position[axis];
+        else if (type === 'rotation') currentValue = safeRotationToDegrees(rotation[axis]);
+        else currentValue = scale[axis];
+        
+        const decimals = type === 'scale' ? 2 : 1;
+        return safeToFixed(currentValue, decimals);
+      })(),
+      
+      onChange: (e: React.ChangeEvent<HTMLInputElement>) => {
+        setEditingInputs(prev => ({ ...prev, [inputKey]: e.target.value }));
+      },
+      
+      onBlur: () => {
+        const value = parseFloat(editingInputs[inputKey] || '0') || 0;
+        const convertedValue = converter ? converter(value) : value;
+        onChange(axis, convertedValue);
+        setEditingInputs(prev => {
+          const { [inputKey]: _, ...rest } = prev;
+          return rest;
+        });
+      },
+      
+      onKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+          const value = parseFloat(editingInputs[inputKey] || '0') || 0;
+          const convertedValue = converter ? converter(value) : value;
+          onChange(axis, convertedValue);
+          setEditingInputs(prev => {
+            const { [inputKey]: _, ...rest } = prev;
+            return rest;
+          });
+          (e.target as HTMLInputElement).blur();
+        }
+      },
+      
+      onFocus: (e: React.FocusEvent<HTMLInputElement>) => {
+        e.target.select();
+      }
+    };
+  }, [editingInputs, position, rotation, scale]);
+
+  // Conditional rendering AFTER all hooks
+  if (!selectedModel) {
+    return (
+      <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 text-gray-400 text-center">
+        Select a model to see transform controls
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gray-800 border border-gray-700 rounded-lg p-4 space-y-4">
@@ -115,8 +172,7 @@ const ModelTransformControls: React.FC<ModelTransformControlsProps> = ({
             <label className="block text-xs text-gray-400 mb-1">X</label>
             <input
               type="number"
-              value={safeToFixed(position.x, 1)}
-              onChange={(e) => onPositionChange('x', parseFloat(e.target.value) || 0)}
+              {...createInputHandler('position', 'x', onPositionChange)}
               className="w-full px-2 py-1 bg-gray-700 text-white rounded text-sm"
               step="0.1"
             />
@@ -125,8 +181,7 @@ const ModelTransformControls: React.FC<ModelTransformControlsProps> = ({
             <label className="block text-xs text-gray-400 mb-1">Y</label>
             <input
               type="number"
-              value={safeToFixed(position.z, 1)}
-              onChange={(e) => onPositionChange('z', parseFloat(e.target.value) || 0)}
+              {...createInputHandler('position', 'z', onPositionChange)}
               className="w-full px-2 py-1 bg-gray-700 text-white rounded text-sm"
               step="0.1"
             />
@@ -135,8 +190,7 @@ const ModelTransformControls: React.FC<ModelTransformControlsProps> = ({
             <label className="block text-xs text-gray-400 mb-1">Z</label>
             <input
               type="number"
-              value={safeToFixed(position.y, 1)}
-              onChange={(e) => onPositionChange('y', parseFloat(e.target.value) || 0)}
+              {...createInputHandler('position', 'y', onPositionChange)}
               className="w-full px-2 py-1 bg-gray-700 text-white rounded text-sm"
               step="0.1"
               placeholder="0.0"
@@ -153,8 +207,7 @@ const ModelTransformControls: React.FC<ModelTransformControlsProps> = ({
             <label className="block text-xs text-gray-400 mb-1">X</label>
             <input
               type="number"
-              value={safeToFixed(safeRotationToDegrees(rotation.x), 1)}
-              onChange={(e) => onRotationChange('x', safeDegreesToRadians(parseFloat(e.target.value) || 0))}
+              {...createInputHandler('rotation', 'x', onRotationChange, safeDegreesToRadians)}
               className="w-full px-2 py-1 bg-gray-700 text-white rounded text-sm"
               step="1"
               placeholder="-90.0"
@@ -164,8 +217,7 @@ const ModelTransformControls: React.FC<ModelTransformControlsProps> = ({
             <label className="block text-xs text-gray-400 mb-1">Y</label>
             <input
               type="number"
-              value={safeToFixed(safeRotationToDegrees(rotation.y), 1)}
-              onChange={(e) => onRotationChange('y', safeDegreesToRadians(parseFloat(e.target.value) || 0))}
+              {...createInputHandler('rotation', 'y', onRotationChange, safeDegreesToRadians)}
               className="w-full px-2 py-1 bg-gray-700 text-white rounded text-sm"
               step="1"
             />
@@ -174,8 +226,7 @@ const ModelTransformControls: React.FC<ModelTransformControlsProps> = ({
             <label className="block text-xs text-gray-400 mb-1">Z</label>
             <input
               type="number"
-              value={safeToFixed(safeRotationToDegrees(rotation.z), 1)}
-              onChange={(e) => onRotationChange('z', safeDegreesToRadians(parseFloat(e.target.value) || 0))}
+              {...createInputHandler('rotation', 'z', onRotationChange, safeDegreesToRadians)}
               className="w-full px-2 py-1 bg-gray-700 text-white rounded text-sm"
               step="1"
             />
@@ -191,8 +242,7 @@ const ModelTransformControls: React.FC<ModelTransformControlsProps> = ({
             <label className="block text-xs text-gray-400 mb-1">X</label>
             <input
               type="number"
-              value={safeToFixed(scale.x, 2)}
-              onChange={(e) => onScaleChange('x', parseFloat(e.target.value) || 1)}
+              {...createInputHandler('scale', 'x', onScaleChange)}
               className="w-full px-2 py-1 bg-gray-700 text-white rounded text-sm"
               step="0.1"
               min="0.1"
@@ -202,8 +252,7 @@ const ModelTransformControls: React.FC<ModelTransformControlsProps> = ({
             <label className="block text-xs text-gray-400 mb-1">Y</label>
             <input
               type="number"
-              value={safeToFixed(scale.y, 2)}
-              onChange={(e) => onScaleChange('y', parseFloat(e.target.value) || 1)}
+              {...createInputHandler('scale', 'y', onScaleChange)}
               className="w-full px-2 py-1 bg-gray-700 text-white rounded text-sm"
               step="0.1"
               min="0.1"
@@ -213,8 +262,7 @@ const ModelTransformControls: React.FC<ModelTransformControlsProps> = ({
             <label className="block text-xs text-gray-400 mb-1">Z</label>
             <input
               type="number"
-              value={safeToFixed(scale.z, 2)}
-              onChange={(e) => onScaleChange('z', parseFloat(e.target.value) || 1)}
+              {...createInputHandler('scale', 'z', onScaleChange)}
               className="w-full px-2 py-1 bg-gray-700 text-white rounded text-sm"
               step="0.1"
               min="0.1"

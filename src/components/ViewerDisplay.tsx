@@ -26,7 +26,7 @@ const ViewerDisplay: React.FC<ViewerDisplayProps> = ({
   }, [onMountReady, slicingMethod]);
 
   return (
-    <div className="flex-1 relative">
+    <div className="flex-1 relative min-h-0">
       {slicingMethod !== 'gcode' && <div ref={mountRef} className="w-full h-full" />}
       
       {/* G-code Display */}

@@ -9,12 +9,11 @@ import SettingsPanel from './SettingsPanel';
 import PrintTimeDisplay from './PrintTimeDisplay';
 import ViewerControls from './ViewerControls';
 import ViewerDisplay from './ViewerDisplay';
+import CameraDirectionIndicator from './CameraDirectionIndicator.tsx';
 import AboutMe from './about/AboutMe';
 import ContactMe from './contact/ContactMe';
 import ModelTransformControls from './ModelTransformControls';
 import ModelList from './ModelList';
-import GridContainer from './GridContainer';
-import GridBox from './GridBox';
 
 // Utils
 import { loadSTL } from '../utils/stlLoader';
@@ -62,6 +61,11 @@ const STLViewer: React.FC = () => {
   const [models, setModels] = useState<ModelData[]>([]);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [transformMode, setTransformMode] = useState<'select' | 'move' | 'rotate' | 'scale'>('select');
+  
+  // Camera direction state
+  const [cameraAzimuth, setCameraAzimuth] = useState(0);
+  const [cameraElevation, setCameraElevation] = useState(0);
+  const [isCameraRotating, setIsCameraRotating] = useState(false);
 
   // Refs
   const sceneRefs = useRef<SceneRefs | null>(null);
@@ -77,10 +81,17 @@ const STLViewer: React.FC = () => {
     });
   }, [viewMode, showSettings]);
 
+  // Camera change handler
+  const handleCameraChange = useCallback((azimuth: number, elevation: number, isRotating: boolean) => {
+    setCameraAzimuth(azimuth);
+    setCameraElevation(elevation);
+    setIsCameraRotating(isRotating);
+  }, []);
+
   // Initialize scene
   const initializeScene = useCallback((container: HTMLElement) => {
     try {
-      const { refs, controls, animate } = createScene(container);
+      const { refs, controls, animate } = createScene(container, handleCameraChange);
       sceneRefs.current = refs;
       controlsRef.current = controls;
       
@@ -101,7 +112,7 @@ const STLViewer: React.FC = () => {
       console.error('Failed to initialize scene:', err);
       setError('Failed to initialize 3D viewer');
     }
-  }, []);
+  }, [handleCameraChange]);
 
   // Upload file to Firebase
   const uploadToFirebase = async (file: File) => {
@@ -158,7 +169,7 @@ const STLViewer: React.FC = () => {
       // Show the grid when file is uploaded
       sceneRefs.current.showGrid();
 
-      // Create unique model ID and add model with optimal positioning
+      // Create unique model ID
       const modelId = `model_${Date.now()}`;
       const modelData = modelManagerRef.current.addModel(modelId, file.name, geometry);
       
@@ -166,6 +177,18 @@ const STLViewer: React.FC = () => {
       setModels(prev => [...prev, modelData]);
       setSelectedModelId(modelId);
       modelManagerRef.current.selectModel(modelId);
+      
+      // Adjust camera for better view
+      geometry.computeBoundingBox();
+      const box = geometry.boundingBox!;
+      const size = box.getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z);
+      sceneRefs.current.camera.position.set(
+        maxDim * 1.5, 
+        maxDim * 1.5, 
+        maxDim * 1.5
+      );
+      sceneRefs.current.camera.lookAt(0, 0, size.z / 2);
       
       // Calculate actual mesh volume using proper geometry calculation
       const volumeMm3 = calculateMeshVolume(geometry);
@@ -338,13 +361,19 @@ const STLViewer: React.FC = () => {
   // Camera controls updated for bottom-positioned grid
   const resetCamera = useCallback(() => {
     if (sceneRefs.current?.camera) {
-      // Use model manager to fit camera to all models
-      if (modelManagerRef.current) {
-        modelManagerRef.current.fitCameraToModels();
+      if (sceneRefs.current?.mesh) {
+        const box = new THREE.Box3().setFromObject(sceneRefs.current.mesh);
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+        sceneRefs.current.camera.position.set(
+          maxDim * 1.5, 
+          maxDim * 1.5, 
+          maxDim * 1.5
+        );
+        sceneRefs.current.camera.lookAt(0, 0, size.z / 2);
       } else {
-        // Default camera position
-        sceneRefs.current.camera.position.set(300, 300, 200);
-        sceneRefs.current.camera.lookAt(0, 0, 50);
+        sceneRefs.current.camera.position.set(200, 200, 200);
+        sceneRefs.current.camera.lookAt(0, 0, 50); // Look slightly above the build platform
       }
     }
   }, []);
@@ -424,24 +453,9 @@ const STLViewer: React.FC = () => {
   const uploadError = currentFile?.uploadError;
 
   return (
-    <div className="w-full h-screen bg-gray-900">
-      <GridContainer 
-        columns="auto 1fr auto" 
-        rows="auto 1fr" 
-        gap="medium"
-        areas={[
-          "header header header",
-          "sidebar viewer settings"
-        ]}
-        responsive={false}
-        className="h-full"
-      >
+    <div className="w-full min-h-dvh bg-gray-900 flex flex-col">
       {/* Header */}
-      <GridBox 
-        gridArea="header" 
-        variant="transparent" 
-        className="bg-gray-800 border-b border-gray-700"
-      >
+      <div className="bg-gray-800 p-4 border-b border-gray-700">
         <div className="flex items-center justify-between">
           <h1 className="text-xl lg:text-2xl font-bold text-white flex items-center gap-2">
             <Move3D className="w-6 h-6 lg:w-8 lg:h-8 text-blue-400" />
@@ -533,27 +547,15 @@ const STLViewer: React.FC = () => {
                   <span><span className="font-semibold">Volume:</span> {modelInfo.volume} cm³</span>
                 </>
               )}
-              {models.length > 1 && (
-                <button
-                  onClick={() => modelManagerRef.current?.centerAllModels()}
-                  className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs"
-                >
-                  Center All
-                </button>
-              )}
             </div>
           </div>
         )}
-      </GridBox>
+      </div>
 
+      <div className="flex flex-1 overflow-hidden">
         {/* Left Panel - Model List and Transform Controls */}
         {viewMode === 'viewer' && (
-          <GridBox 
-            gridArea="sidebar" 
-            size="medium"
-            variant="transparent"
-            className="w-full sm:w-72 md:w-80 lg:w-80 xl:w-96 bg-gray-900 border-r border-gray-700 space-y-4 overflow-y-auto"
-          >
+          <div className="w-full sm:w-72 md:w-80 lg:w-80 xl:w-96 bg-gray-900 border-r border-gray-700 p-2 lg:p-4 space-y-4 overflow-y-auto flex-shrink-0">
             <ModelList
               models={models.map(m => ({
                 id: m.id,
@@ -582,36 +584,29 @@ const STLViewer: React.FC = () => {
               onRotationChange={(axis, value) => handleModelTransformChange(axis, value, 'rotation')}
               onScaleChange={(axis, value) => handleModelTransformChange(axis, value, 'scale')}
             />
-          </GridBox>
+          </div>
         )}
 
         {/* Settings panel - visible in viewer mode when showSettings is true */}
         {viewMode === 'viewer' && showSettings && (
-          <GridBox 
-            gridArea="settings" 
-            size="medium"
-            variant="transparent"
-            className="w-full sm:w-72 md:w-80 lg:w-80 xl:w-96"
-          >
+          <div className="flex-shrink-0 w-full sm:w-72 md:w-80 lg:w-80 xl:w-96">
             <SettingsPanel
               settings={printSettings}
               onSettingsChange={setPrintSettings}
             />
-          </GridBox>
+          </div>
         )}
 
-        <GridBox 
-          gridArea="viewer" 
-          size="full"
-          variant="transparent"
-          className="flex flex-col relative min-w-0"
-        >
+        <div className="flex-1 flex flex-col relative min-w-0">
           {/* Viewer Section - Always mounted but hidden when not active */}
           <div className={`${viewMode === 'viewer' ? 'flex flex-col flex-1' : 'hidden'}`}>
             <PrintTimeDisplay
               estimate={printTimeEstimate}
               slicingMethod={slicingMethod}
               modelVolume={getModelVolume()}
+              cameraAzimuth={cameraAzimuth}
+              cameraElevation={cameraElevation}
+              isCameraRotating={isCameraRotating}
             />
             <ViewerDisplay
               slicingMethod={slicingMethod}
@@ -635,8 +630,8 @@ const STLViewer: React.FC = () => {
               <ContactMe />
             </div>
           )}
-        </GridBox>
-      </GridContainer>
+        </div>
+      </div>
       <Toaster />
     </div>
   );
