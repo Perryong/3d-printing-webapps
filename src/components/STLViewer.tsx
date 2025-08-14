@@ -13,6 +13,8 @@ import AboutMe from './about/AboutMe';
 import ContactMe from './contact/ContactMe';
 import ModelTransformControls from './ModelTransformControls';
 import ModelList from './ModelList';
+import GridContainer from './GridContainer';
+import GridBox from './GridBox';
 
 // Utils
 import { loadSTL } from '../utils/stlLoader';
@@ -422,9 +424,24 @@ const STLViewer: React.FC = () => {
   const uploadError = currentFile?.uploadError;
 
   return (
-    <div className="w-full h-screen bg-gray-900 flex flex-col">
+    <div className="w-full h-screen bg-gray-900">
+      <GridContainer 
+        columns="auto 1fr auto" 
+        rows="auto 1fr" 
+        gap="medium"
+        areas={[
+          "header header header",
+          "sidebar viewer settings"
+        ]}
+        responsive={false}
+        className="h-full"
+      >
       {/* Header */}
-      <div className="bg-gray-800 p-4 border-b border-gray-700">
+      <GridBox 
+        gridArea="header" 
+        variant="transparent" 
+        className="bg-gray-800 border-b border-gray-700"
+      >
         <div className="flex items-center justify-between">
           <h1 className="text-xl lg:text-2xl font-bold text-white flex items-center gap-2">
             <Move3D className="w-6 h-6 lg:w-8 lg:h-8 text-blue-400" />
@@ -527,12 +544,16 @@ const STLViewer: React.FC = () => {
             </div>
           </div>
         )}
-      </div>
+      </GridBox>
 
-      <div className="flex flex-1 overflow-hidden">
         {/* Left Panel - Model List and Transform Controls */}
         {viewMode === 'viewer' && (
-          <div className="w-full sm:w-72 md:w-80 lg:w-80 xl:w-96 bg-gray-900 border-r border-gray-700 p-2 lg:p-4 space-y-4 overflow-y-auto flex-shrink-0">
+          <GridBox 
+            gridArea="sidebar" 
+            size="medium"
+            variant="transparent"
+            className="w-full sm:w-72 md:w-80 lg:w-80 xl:w-96 bg-gray-900 border-r border-gray-700 space-y-4 overflow-y-auto"
+          >
             <ModelList
               models={models.map(m => ({
                 id: m.id,
@@ -561,20 +582,30 @@ const STLViewer: React.FC = () => {
               onRotationChange={(axis, value) => handleModelTransformChange(axis, value, 'rotation')}
               onScaleChange={(axis, value) => handleModelTransformChange(axis, value, 'scale')}
             />
-          </div>
+          </GridBox>
         )}
 
         {/* Settings panel - visible in viewer mode when showSettings is true */}
         {viewMode === 'viewer' && showSettings && (
-          <div className="flex-shrink-0 w-full sm:w-72 md:w-80 lg:w-80 xl:w-96">
+          <GridBox 
+            gridArea="settings" 
+            size="medium"
+            variant="transparent"
+            className="w-full sm:w-72 md:w-80 lg:w-80 xl:w-96"
+          >
             <SettingsPanel
               settings={printSettings}
               onSettingsChange={setPrintSettings}
             />
-          </div>
+          </GridBox>
         )}
 
-        <div className="flex-1 flex flex-col relative min-w-0">
+        <GridBox 
+          gridArea="viewer" 
+          size="full"
+          variant="transparent"
+          className="flex flex-col relative min-w-0"
+        >
           {/* Viewer Section - Always mounted but hidden when not active */}
           <div className={`${viewMode === 'viewer' ? 'flex flex-col flex-1' : 'hidden'}`}>
             <PrintTimeDisplay
@@ -604,8 +635,8 @@ const STLViewer: React.FC = () => {
               <ContactMe />
             </div>
           )}
-        </div>
-      </div>
+        </GridBox>
+      </GridContainer>
       <Toaster />
     </div>
   );
