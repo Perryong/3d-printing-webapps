@@ -114,3 +114,24 @@
     height: auto;
   }
 }
+.viewer-dimension {
+  padding: 4px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, .94);
+  color: #35557e;
+  font: 500 12px/1.3 ui-monospace, monospace;
+  white-space: nowrap;
+}
+
+@keyframes receipt-feed {
+  from { transform: translateY(calc(-100% + 2px)); }
+  to { transform: translateY(0); }
+}
+.payment-receipt-paper {
+  animation: receipt-feed 1.75s steps(12, end) both;
+  clip-path: polygon(0 0,100% 0,100% 98%,95% 100%,90% 98%,85% 100%,80% 98%,75% 100%,70% 98%,65% 100%,60% 98%,55% 100%,50% 98%,45% 100%,40% 98%,35% 100%,30% 98%,25% 100%,20% 98%,15% 100%,10% 98%,5% 100%,0 98%);
+}
+@media (prefers-reduced-motion: reduce) {
+  .payment-receipt-paper { animation: none; }
+}

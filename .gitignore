@@ -23,3 +23,16 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+functions/node_modules/
+functions/lib/
+.emulator-tests/
+*-debug.log
+playwright-report/
+test-results/
+.env.local
+.emulator-seed.json
+.vercel
+.env*
+
+functions/.env.*

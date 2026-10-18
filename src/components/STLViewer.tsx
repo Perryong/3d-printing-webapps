@@ -1,14 +1,19 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import * as THREE from 'three';
-import { Move3D, Settings, Store, Calculator as CalcIcon } from 'lucide-react';
+import { Move3D, Settings, Store, PanelLeft, Calculator as CalcIcon } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 
 // Components
 import FileUpload from './FileUpload';
 import SettingsPanel from './SettingsPanel';
 import PrintTimeDisplay from './PrintTimeDisplay';
+import QuotePanel from './checkout/QuotePanel';
+import { STLExporter } from 'three/examples/jsm/exporters/STLExporter.js';
+import { toPreliminaryJob } from '../utils/printEstimator';
 import ViewerControls from './ViewerControls';
 import ViewerDisplay from './ViewerDisplay';
+import ViewerToolbar from './ViewerToolbar';
+import type { DisplayMode } from '../utils/modelManager';
 import CameraDirectionIndicator from './CameraDirectionIndicator.tsx';
 import AboutMe from './about/AboutMe';
 import ContactMe from './contact/ContactMe';
@@ -19,12 +24,12 @@ import ModelList from './ModelList';
 import { loadSTL } from '../utils/stlLoader';
 import { estimatePrintTime, PrintSettings, PrintEstimate } from '../utils/printEstimator';
 import { analyzeGCode, GCodeAnalysis } from '../utils/gcodeAnalyzer';
-import { createScene, SceneRefs, OrbitControls } from '../utils/sceneManager';
+import { createScene, SceneRefs, OrbitControls, CameraView } from '../utils/sceneManager';
 import { ModelManager, ModelData } from '../utils/modelManager';
 import { calculateMeshVolume, convertMmToCm } from '../utils/stlVolumeCalculator';
 
 // Services
-import { uploadFileToStorage } from '../services/firebaseStorage';
+
 
 // Context
 import { useApp } from '../context/AppContext';
@@ -56,12 +61,32 @@ const STLViewer: React.FC = () => {
   const [printSettings, setPrintSettings] = useState<PrintSettings>(DEFAULT_PRINT_SETTINGS);
   const [printTimeEstimate, setPrintTimeEstimate] = useState<PrintEstimate | GCodeAnalysis | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showModelControls, setShowModelControls] = useState(false);
   const [slicingMethod, setSlicingMethod] = useState<'simplified' | 'gcode'>('simplified');
   const [viewMode, setViewMode] = useState<ViewMode>('viewer');
+  const [checkoutFile, setCheckoutFile] = useState<File | null>(null);
+  const [modelRevision, setModelRevision] = useState('');
   const [models, setModels] = useState<ModelData[]>([]);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [transformMode, setTransformMode] = useState<'select' | 'move' | 'rotate' | 'scale'>('select');
   
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('edges');
+  const [dimensionsVisible, setDimensionsVisible] = useState(true);
+  const [gridVisible, setGridVisible] = useState(true);
+  const [fullscreen, setFullscreen] = useState(false);
+  const inspectionRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const sync = () => setFullscreen(document.fullscreenElement === inspectionRef.current);
+    document.addEventListener('fullscreenchange', sync);
+    return () => document.removeEventListener('fullscreenchange', sync);
+  }, []);
+  const toggleFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await inspectionRef.current?.requestFullscreen();
+    } catch { toast.error('Fullscreen is unavailable in this browser. Enlarge the browser panel to inspect the model.'); }
+  };
+
   // Camera direction state
   const [cameraAzimuth, setCameraAzimuth] = useState(0);
   const [cameraElevation, setCameraElevation] = useState(0);
@@ -96,7 +121,13 @@ const STLViewer: React.FC = () => {
       controlsRef.current = controls;
       
       // Initialize model manager
-      modelManagerRef.current = new ModelManager(refs.scene, refs.camera, refs.renderer);
+      modelManagerRef.current = new ModelManager(refs.scene, refs.camera, refs.renderer, () => {
+        const manager = modelManagerRef.current;
+        if (!manager) return;
+        setModels([...manager.getAllModels()]);
+        setSelectedModelId(manager.getSelectedModel()?.id ?? null);
+        refs.mesh = manager.getSelectedModel()?.mesh;
+      });
       
       animate();
       
@@ -104,9 +135,8 @@ const STLViewer: React.FC = () => {
         if (modelManagerRef.current) {
           modelManagerRef.current.dispose();
         }
-        if (controlsRef.current) {
-          controlsRef.current.dispose();
-        }
+        refs.dispose();
+        sceneRefs.current = null;
       };
     } catch (err) {
       console.error('Failed to initialize scene:', err);
@@ -114,50 +144,15 @@ const STLViewer: React.FC = () => {
     }
   }, [handleCameraChange]);
 
-  // Upload file to Firebase
-  const uploadToFirebase = async (file: File) => {
-    try {
-      dispatch({ type: 'FIREBASE_UPLOAD_START', payload: file.name });
-      toast.info(`Uploading ${file.name} to cloud storage...`);
-      
-      const uploadResult = await uploadFileToStorage(file);
-      
-      dispatch({ 
-        type: 'FIREBASE_UPLOAD_SUCCESS', 
-        payload: { 
-          fileName: file.name, 
-          metadata: {
-            ...uploadResult,
-            uploadedAt: new Date()
-          }
-        }
-      });
-      
-      toast.success(`${file.name} uploaded to cloud storage successfully!`);
-      console.log('File uploaded to Firebase:', uploadResult);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
-      dispatch({ 
-        type: 'FIREBASE_UPLOAD_ERROR', 
-        payload: { fileName: file.name, error: errorMessage }
-      });
-      toast.error(`Failed to upload ${file.name} to cloud storage: ${errorMessage}`);
-      console.error('Firebase upload error:', error);
-    }
-  };
-
   // Load STL file
   const loadSTLFile = useCallback(async (file: File) => {
     setIsLoading(true);
     setError('');
     
     try {
-      // Store the file in app context for contact form
-      dispatch({ type: 'ADD_UPLOADED_FILE', payload: file });
-      toast.success(`File "${file.name}" loaded into viewer`);
 
-      // Upload to Firebase in the background
-      uploadToFirebase(file);
+
+      // Files remain local until a deliberate checkout submission.
 
       const arrayBuffer = await file.arrayBuffer();
       const geometry = loadSTL(arrayBuffer);
@@ -167,10 +162,13 @@ const STLViewer: React.FC = () => {
       }
 
       // Show the grid when file is uploaded
-      sceneRefs.current.showGrid();
+      if (gridVisible) sceneRefs.current.showGrid();
+      else sceneRefs.current.hideGrid();
 
+      // File inspection shows one part at a time; model controls can reveal others.
+      modelManagerRef.current.getAllModels().forEach(model => modelManagerRef.current!.setModelVisibility(model.id, false));
       // Create unique model ID
-      const modelId = `model_${Date.now()}`;
+      const modelId = crypto.randomUUID();
       const modelData = modelManagerRef.current.addModel(modelId, file.name, geometry);
       
       // Update models list
@@ -178,22 +176,17 @@ const STLViewer: React.FC = () => {
       setSelectedModelId(modelId);
       modelManagerRef.current.selectModel(modelId);
       
-      // Adjust camera for better view
       geometry.computeBoundingBox();
-      const box = geometry.boundingBox!;
-      const size = box.getSize(new THREE.Vector3());
-      const maxDim = Math.max(size.x, size.y, size.z);
-      sceneRefs.current.camera.position.set(
-        maxDim * 1.5, 
-        maxDim * 1.5, 
-        maxDim * 1.5
-      );
-      sceneRefs.current.camera.lookAt(0, 0, size.z / 2);
-      
+      const size = geometry.boundingBox!.getSize(new THREE.Vector3());
+      sceneRefs.current.mesh = modelData.mesh;
+      sceneRefs.current.fit(modelData.mesh);
+
       // Calculate actual mesh volume using proper geometry calculation
       const volumeMm3 = calculateMeshVolume(geometry);
       const volumeCm3 = convertMmToCm(volumeMm3);
       
+      dispatch({ type: 'ADD_UPLOADED_FILE', payload: file });
+      toast.success(`File "${file.name}" loaded into viewer`);
       setFileName(file.name);
       setModelInfo({
         vertices: geometry.attributes.position.count,
@@ -210,13 +203,13 @@ const STLViewer: React.FC = () => {
         const timeEstimate = estimatePrintTime(geometry, printSettings);
         setPrintTimeEstimate(timeEstimate);
       }
-      
+      geometry.dispose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load STL file');
     } finally {
       setIsLoading(false);
     }
-  }, [printSettings, slicingMethod, dispatch]);
+  }, [printSettings, slicingMethod, dispatch, gridVisible]);
 
   // Handle G-code file upload
   const handleGCodeUpload = useCallback(async (file: File) => {
@@ -228,8 +221,7 @@ const STLViewer: React.FC = () => {
       dispatch({ type: 'ADD_UPLOADED_FILE', payload: file });
       toast.success(`File "${file.name}" loaded into viewer`);
 
-      // Upload to Firebase in the background
-      uploadToFirebase(file);
+      // Files remain local until a deliberate checkout submission.
 
       const content = await file.text();
       const analysis = analyzeGCode(content);
@@ -237,10 +229,7 @@ const STLViewer: React.FC = () => {
       setFileName(file.name);
       setSlicingMethod('gcode');
       
-      // Show grid for G-code files too
-      if (sceneRefs.current) {
-        sceneRefs.current.showGrid();
-      }
+
     } catch (err) {
       setError('Failed to analyze G-code file');
     } finally {
@@ -265,7 +254,15 @@ const STLViewer: React.FC = () => {
   const handleModelSelect = useCallback((modelId: string) => {
     setSelectedModelId(modelId);
     if (modelManagerRef.current) {
+      modelManagerRef.current.getAllModels().forEach(model => modelManagerRef.current!.setModelVisibility(model.id, model.id === modelId));
       modelManagerRef.current.selectModel(modelId);
+      setModels([...modelManagerRef.current.getAllModels()]);
+      const model = modelManagerRef.current.getSelectedModel();
+      if (model) {
+        setSlicingMethod('simplified');
+        setFileName(model.name);
+        sceneRefs.current?.fit(model.mesh);
+      }
     }
   }, []);
 
@@ -299,6 +296,7 @@ const STLViewer: React.FC = () => {
     setTransformMode(mode);
     if (modelManagerRef.current) {
       modelManagerRef.current.setTransformMode(mode);
+      if (controlsRef.current) controlsRef.current.enableRotate = mode !== "move";
     }
   }, []);
 
@@ -338,6 +336,7 @@ const STLViewer: React.FC = () => {
     type: 'position' | 'rotation' | 'scale'
   ) => {
     if (selectedModelId && modelManagerRef.current) {
+      if (modelManagerRef.current.getSelectedModel()?.locked || !Number.isFinite(value) || (type === "scale" && value <= 0)) return;
       // Update the model manager
       modelManagerRef.current.updateModelProperty(selectedModelId, type, axis, value);
       
@@ -358,63 +357,58 @@ const STLViewer: React.FC = () => {
     }
   }, [selectedModelId]);
 
-  // Camera controls updated for bottom-positioned grid
-  const resetCamera = useCallback(() => {
-    if (sceneRefs.current?.camera) {
-      if (sceneRefs.current?.mesh) {
-        const box = new THREE.Box3().setFromObject(sceneRefs.current.mesh);
+  const setCameraView = useCallback((view: CameraView) => {
+    const manager = modelManagerRef.current;
+    const selected = manager?.getSelectedModel();
+    if (selected?.visible) {
+      sceneRefs.current?.fit(selected.mesh, view);
+    } else {
+      const visible = manager?.getAllModels().filter(model => model.visible) ?? [];
+      const box = new THREE.Box3();
+      visible.forEach(model => box.expandByObject(model.mesh));
+      // Fit visible models without reparenting the live meshes.
+      if (visible.length) {
         const size = box.getSize(new THREE.Vector3());
-        const maxDim = Math.max(size.x, size.y, size.z);
-        sceneRefs.current.camera.position.set(
-          maxDim * 1.5, 
-          maxDim * 1.5, 
-          maxDim * 1.5
-        );
-        sceneRefs.current.camera.lookAt(0, 0, size.z / 2);
-      } else {
-        sceneRefs.current.camera.position.set(200, 200, 200);
-        sceneRefs.current.camera.lookAt(0, 0, 50); // Look slightly above the build platform
-      }
+        const proxy = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z));
+        proxy.position.copy(box.getCenter(new THREE.Vector3()));
+        sceneRefs.current?.fit(proxy, view);
+        proxy.geometry.dispose();
+        (proxy.material as THREE.Material).dispose();
+      } else sceneRefs.current?.fit(undefined, view);
     }
   }, []);
+  const resetCamera = useCallback(() => setCameraView('iso'), [setCameraView]);
+  const zoomIn = useCallback(() => sceneRefs.current?.zoom(0.8), []);
+  const zoomOut = useCallback(() => sceneRefs.current?.zoom(1.25), []);
 
-  const zoomIn = useCallback(() => {
-    if (sceneRefs.current?.camera) {
-      sceneRefs.current.camera.position.multiplyScalar(0.8);
-      sceneRefs.current.camera.position.clampLength(50, 800);
-    }
-  }, []);
-
-  const zoomOut = useCallback(() => {
-    if (sceneRefs.current?.camera) {
-      sceneRefs.current.camera.position.multiplyScalar(1.25);
-      sceneRefs.current.camera.position.clampLength(50, 800);
-    }
-  }, []);
-
-  // Update print time when settings change
+  // Use the selected, transformed part for both the header and the estimate.
   useEffect(() => {
-    if (sceneRefs.current?.mesh && slicingMethod === 'simplified') {
-      const timeEstimate = estimatePrintTime(sceneRefs.current.mesh.geometry, printSettings);
-      setPrintTimeEstimate(timeEstimate);
+    if (slicingMethod !== 'simplified') { setCheckoutFile(null); return; }
+    const model = models.find(model => model.id === selectedModelId);
+    if (!model) {
+      setCheckoutFile(null);
+      setModelRevision(crypto.randomUUID());
+      setModelInfo(null);
+      setPrintTimeEstimate(null);
+      return;
     }
-  }, [printSettings, slicingMethod]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (sceneRefs.current?.renderer && sceneRefs.current.renderer.domElement.parentNode) {
-        sceneRefs.current.renderer.domElement.parentNode.removeChild(sceneRefs.current.renderer.domElement);
-      }
-      if (sceneRefs.current?.mesh) {
-        sceneRefs.current.mesh.geometry.dispose();
-        sceneRefs.current.mesh.material.dispose();
-      }
-      if (sceneRefs.current?.renderer) {
-        sceneRefs.current.renderer.dispose();
-      }
-    };
-  }, []);
+    model.mesh.updateMatrixWorld(true);
+    const geometry = model.mesh.geometry.clone().applyMatrix4(model.mesh.matrixWorld);
+    geometry.rotateX(Math.PI / 2); // Convert the Y-up display back to printer Z-up.
+    geometry.computeBoundingBox();
+    const size = geometry.boundingBox!.getSize(new THREE.Vector3());
+    setModelInfo({
+      vertices: geometry.attributes.position.count,
+      triangles: geometry.attributes.position.count / 3,
+      size: { x: size.x.toFixed(2), y: size.y.toFixed(2), z: size.z.toFixed(2) },
+      volume: convertMmToCm(calculateMeshVolume(geometry)).toFixed(2)
+    });
+    setPrintTimeEstimate(estimatePrintTime(geometry, printSettings));
+    const exported = new STLExporter().parse(new THREE.Mesh(geometry), {binary:true});
+    setCheckoutFile(new File([exported], 'selected-part.stl', {type:'application/octet-stream'}));
+    setModelRevision(crypto.randomUUID());
+    geometry.dispose();
+  }, [models, selectedModelId, printSettings, slicingMethod]);
 
   // Hide settings when switching away from viewer mode
   useEffect(() => {
@@ -453,17 +447,17 @@ const STLViewer: React.FC = () => {
   const uploadError = currentFile?.uploadError;
 
   return (
-    <div className="w-full min-h-dvh bg-gray-900 flex flex-col">
+    <div className="w-full h-dvh bg-gray-900 flex flex-col overflow-hidden">
       {/* Header */}
       <div className="bg-gray-800 p-4 border-b border-gray-700">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h1 className="text-xl lg:text-2xl font-bold text-white flex items-center gap-2">
             <Move3D className="w-6 h-6 lg:w-8 lg:h-8 text-blue-400" />
             <span className="hidden sm:inline">3D Print Services Platform</span>
             <span className="sm:hidden">3D Print Services</span>
           </h1>
           
-          <div className="flex items-center gap-2 lg:gap-4">
+          <div className="flex flex-wrap items-center gap-2 lg:gap-4">
             <FileUpload 
               onFileSelect={handleFileUpload} 
               isLoading={isLoading}
@@ -484,6 +478,7 @@ const STLViewer: React.FC = () => {
                 Viewer
               </button>
               <button
+                aria-label="About"
                 onClick={() => setViewMode('about')}
                 className={`px-2 lg:px-3 py-2 rounded-md text-xs lg:text-sm font-medium transition-colors flex items-center gap-1 ${
                   viewMode === 'about' 
@@ -495,6 +490,7 @@ const STLViewer: React.FC = () => {
                 <span className="hidden sm:inline">About</span>
               </button>
               <button
+                aria-label="Contact"
                 onClick={() => setViewMode('contact')}
                 className={`px-2 lg:px-3 py-2 rounded-md text-xs lg:text-sm font-medium transition-colors flex items-center gap-1 ${
                   viewMode === 'contact' 
@@ -507,6 +503,21 @@ const STLViewer: React.FC = () => {
               </button>
             </div>
             
+            {viewMode === 'viewer' && (
+              <button
+                aria-expanded={showModelControls}
+                aria-controls="model-controls"
+                onClick={() => {
+                  setShowModelControls(!showModelControls);
+                  if (showModelControls) handleTransformModeChange('select');
+                }}
+                className="px-3 py-2 rounded-lg flex items-center gap-2 bg-gray-700 hover:bg-gray-600 text-white text-sm"
+              >
+                <PanelLeft className="w-4 h-4" />
+                {showModelControls ? 'Hide controls' : 'Show controls'}
+              </button>
+            )}
+
             {/* Settings button - only show when in viewer mode */}
             {viewMode === 'viewer' && (
               <button
@@ -525,13 +536,6 @@ const STLViewer: React.FC = () => {
               </button>
             )}
             
-            {fileName && slicingMethod !== 'gcode' && viewMode === 'viewer' && (
-              <ViewerControls
-                onZoomIn={zoomIn}
-                onZoomOut={zoomOut}
-                onResetCamera={resetCamera}
-              />
-            )}
           </div>
         </div>
         
@@ -539,7 +543,7 @@ const STLViewer: React.FC = () => {
         {fileName && (
           <div className="mt-3 text-sm text-gray-300">
             <div className="flex flex-wrap items-center gap-2 lg:gap-4">
-              <span><span className="font-semibold">File:</span> {fileName}</span>
+              <span><span className="font-semibold">File:</span> {slicingMethod === 'simplified' ? selectedModel?.name ?? fileName : fileName}</span>
               {modelInfo && (
                 <>
                   <span className="hidden sm:inline"><span className="font-semibold">Triangles:</span> {modelInfo.triangles.toLocaleString()}</span>
@@ -554,8 +558,11 @@ const STLViewer: React.FC = () => {
 
       <div className="flex flex-1 overflow-hidden">
         {/* Left Panel - Model List and Transform Controls */}
-        {viewMode === 'viewer' && (
-          <div className="w-full sm:w-72 md:w-80 lg:w-80 xl:w-96 bg-gray-900 border-r border-gray-700 p-2 lg:p-4 space-y-4 overflow-y-auto flex-shrink-0">
+        {viewMode === 'viewer' && showModelControls && (
+          <div id="model-controls" className="w-48 sm:w-60 lg:w-64 bg-gray-900 border-r border-gray-700 p-2 lg:p-4 space-y-4 overflow-y-auto flex-shrink-0">
+            <button className="w-full rounded border border-slate-600 px-3 py-2 text-sm text-slate-200 hover:bg-slate-800" onClick={() => handleTransformModeChange('select')}>
+              Orbit / select
+            </button>
             <ModelList
               models={models.map(m => ({
                 id: m.id,
@@ -577,6 +584,7 @@ const STLViewer: React.FC = () => {
               onDuplicate={handleModelDuplicate}
               onDelete={handleModelDelete}
               onReset={handleModelReset}
+              key={selectedModelId}
               position={selectedModel ? selectedModel.transform.position : { x: 0, y: 0, z: 0 }}
               rotation={selectedModel ? selectedModel.transform.rotation : { x: -Math.PI / 2, y: 0, z: 0 }}
               scale={selectedModel ? selectedModel.transform.scale : { x: 1, y: 1, z: 1 }}
@@ -589,7 +597,7 @@ const STLViewer: React.FC = () => {
 
         {/* Settings panel - visible in viewer mode when showSettings is true */}
         {viewMode === 'viewer' && showSettings && (
-          <div className="flex-shrink-0 w-full sm:w-72 md:w-80 lg:w-80 xl:w-96">
+          <div className="flex-shrink-0 w-64">
             <SettingsPanel
               settings={printSettings}
               onSettingsChange={setPrintSettings}
@@ -599,7 +607,9 @@ const STLViewer: React.FC = () => {
 
         <div className="flex-1 flex flex-col relative min-w-0">
           {/* Viewer Section - Always mounted but hidden when not active */}
-          <div className={`${viewMode === 'viewer' ? 'flex flex-col flex-1' : 'hidden'}`}>
+          <div className={`${viewMode === 'viewer' ? 'flex flex-col flex-1 min-h-0' : 'hidden'}`}>
+            <details className="shrink-0 bg-gray-800 text-gray-300">
+              <summary className="cursor-pointer px-4 py-2 text-xs">Print estimate & pricing</summary>
             <PrintTimeDisplay
               estimate={printTimeEstimate}
               slicingMethod={slicingMethod}
@@ -608,6 +618,18 @@ const STLViewer: React.FC = () => {
               cameraElevation={cameraElevation}
               isCameraRotating={isCameraRotating}
             />
+            </details>
+            <QuotePanel job={printTimeEstimate && slicingMethod === 'simplified' ? toPreliminaryJob(printTimeEstimate, 1) : null} modelFile={checkoutFile} modelRevision={modelRevision} inspecting={fullscreen} />
+            <div ref={inspectionRef} className="relative flex min-h-0 flex-1 flex-col bg-slate-100" data-testid="inspection-viewer">
+            <ViewerToolbar mode={displayMode} onModeChange={mode => { setDisplayMode(mode); modelManagerRef.current?.setDisplayMode(mode); }}
+              dimensions={dimensionsVisible} grid={gridVisible}
+              onDimensionsChange={() => { setDimensionsVisible(!dimensionsVisible); sceneRefs.current?.setDimensionsVisible(!dimensionsVisible); }}
+              onGridChange={() => { setGridVisible(!gridVisible); if (gridVisible) sceneRefs.current?.hideGrid(); else sceneRefs.current?.showGrid(); }}
+              fullscreen={fullscreen} onFullscreen={toggleFullscreen} />
+            <div className="relative flex min-h-0 flex-1 flex-col">
+            {fileName && slicingMethod !== 'gcode' && <div className="absolute left-2 top-2 z-10 max-w-[calc(100%-1rem)] rounded-lg bg-white/90 p-1 shadow-sm">
+              <ViewerControls onZoomIn={zoomIn} onZoomOut={zoomOut} onResetCamera={resetCamera} onViewChange={setCameraView} />
+            </div>}
             <ViewerDisplay
               slicingMethod={slicingMethod}
               fileName={fileName}
@@ -615,6 +637,16 @@ const STLViewer: React.FC = () => {
               error={error}
               onMountReady={initializeScene}
             />
+            </div>
+            {models.length > 0 && <div className="flex shrink-0 items-center gap-2 border-t border-slate-200 bg-white p-2 text-slate-700">
+              <button className="min-h-10 rounded border px-3 disabled:opacity-30" aria-label="Previous file" disabled={models.findIndex(m => m.id === selectedModelId) <= 0} onClick={() => handleModelSelect(models[models.findIndex(m => m.id === selectedModelId) - 1].id)}>‹</button>
+              <select aria-label="Selected file" className="min-h-10 min-w-0 flex-1 rounded border bg-white p-2 text-sm" value={selectedModelId ?? ''} onChange={event => handleModelSelect(event.target.value)}>
+                <option value="" disabled>Select a model</option>
+                {models.map(model => <option value={model.id} key={model.id}>{model.name}</option>)}
+              </select>
+              <button className="min-h-10 rounded border px-3 disabled:opacity-30" aria-label="Next file" disabled={models.findIndex(m => m.id === selectedModelId) >= models.length - 1} onClick={() => handleModelSelect(models[models.findIndex(m => m.id === selectedModelId) + 1].id)}>›</button>
+            </div>}
+            </div>
           </div>
 
           {/* About Section */}

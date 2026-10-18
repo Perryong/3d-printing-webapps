@@ -1,20 +1,23 @@
 import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+export { OrbitControls };
+export type CameraView = 'iso' | 'front' | 'top' | 'right';
 
 export interface SceneRefs {
   scene: THREE.Scene;
-  camera: THREE.PerspectiveCamera;
+  camera: THREE.OrthographicCamera;
   renderer: THREE.WebGLRenderer;
   mesh?: THREE.Mesh;
   grid?: THREE.Group;
   showGrid: () => void;
   hideGrid: () => void;
+  setDimensionsVisible: (visible: boolean) => void;
   repositionGrid: (x: number, y: number, z: number) => void;
-  onCameraChange?: (azimuth: number, elevation: number, isRotating: boolean) => void;
-}
-
-export interface OrbitControls {
+  fit: (object?: THREE.Object3D, view?: CameraView) => void;
+  zoom: (factor: number) => void;
   dispose: () => void;
-  enabled: boolean;
+  onCameraChange?: (azimuth: number, elevation: number, isRotating: boolean) => void;
 }
 
 // Create build platform grid based on Bambu Lab A1 specs (256x256x256mm)
@@ -27,7 +30,7 @@ const createBuildGrid = (): THREE.Group => {
   const divisions = 32; // 8mm grid spacing
   
   // Main grid lines at the bottom (build platform level)
-  const gridHelper = new THREE.GridHelper(gridSize, divisions, 0x888888, 0xcccccc);
+  const gridHelper = new THREE.GridHelper(gridSize, divisions, 0xcbd2da, 0xe0e5eb);
   gridHelper.rotateX(Math.PI / 2); // Rotate to XY plane
   gridHelper.position.z = 0; // Position at the bottom of build volume
   gridGroup.add(gridHelper);
@@ -39,7 +42,7 @@ const createBuildGrid = (): THREE.Group => {
   const outlineMaterial = new THREE.LineBasicMaterial({ 
     color: 0x4a90e2, 
     transparent: true, 
-    opacity: 0.3 
+    opacity: 0.12
   });
   const outline = new THREE.LineSegments(outlineGeometry, outlineMaterial);
   outline.position.z = buildSize / 2; // Move up so bottom edge is at z=0
@@ -124,195 +127,163 @@ const createBuildGrid = (): THREE.Group => {
 };
 
 export const createScene = (container: HTMLElement, onCameraChange?: (azimuth: number, elevation: number, isRotating: boolean) => void): { refs: SceneRefs; controls: OrbitControls; animate: () => void } => {
-  const width = container.clientWidth;
-  const height = container.clientHeight;
-
-  // Scene with white background
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0xffffff);
-
-  // Camera
-  const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 2000);
-  camera.position.set(200, 200, 200);
-
-  // Renderer
+  scene.background = new THREE.Color(0xf4f6f8);
+  const camera = new THREE.OrthographicCamera(-200, 200, 150, -150, 0.1, 10000);
+  let aspect = 1;
+  let halfHeight = 150;
+  camera.position.set(300, 240, 300);
   const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(width, height);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
   container.appendChild(renderer.domElement);
-
-  // Lighting optimized for white background
-  const ambientLight = new THREE.AmbientLight(0x404040, 0.8);
-  scene.add(ambientLight);
-
-  const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
-  directionalLight.position.set(200, 200, 200);
-  directionalLight.castShadow = true;
-  directionalLight.shadow.mapSize.width = 2048;
-  directionalLight.shadow.mapSize.height = 2048;
-  directionalLight.shadow.camera.near = 0.1;
-  directionalLight.shadow.camera.far = 1000;
-  directionalLight.shadow.camera.left = -300;
-  directionalLight.shadow.camera.right = 300;
-  directionalLight.shadow.camera.top = 300;
-  directionalLight.shadow.camera.bottom = -300;
-  scene.add(directionalLight);
-
-  const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.6);
-  directionalLight2.position.set(-200, -200, 100);
-  scene.add(directionalLight2);
-
-  // Create build grid but don't add it to the scene initially
+  const labels = new CSS2DRenderer();
+  Object.assign(labels.domElement.style, { position: 'absolute', inset: '0', pointerEvents: 'none' });
+  container.appendChild(labels.domElement);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x8c96a5, 2));
+  const key = new THREE.DirectionalLight(0xffffff, 2.4);
+  key.position.set(150, 300, 200);
+  scene.add(key);
+  const fill = new THREE.DirectionalLight(0xffffff, 0.8);
+  fill.position.set(-200, 100, -100);
+  scene.add(fill);
   const grid = createBuildGrid();
   grid.visible = false;
+  scene.add(grid);
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.target.set(0, 30, 0);
+  controls.minZoom = 0.05;
+  controls.maxZoom = 100;
+  controls.minDistance = 0.1;
+  controls.maxDistance = 100000;
+  controls.update();
+  let rotating = false;
+  const notify = () => onCameraChange?.(controls.getAzimuthalAngle(), Math.PI / 2 - controls.getPolarAngle(), rotating);
+  controls.addEventListener('start', () => { rotating = true; notify(); });
+  controls.addEventListener('end', () => { rotating = false; notify(); });
+  controls.addEventListener('change', notify);
 
-  // Camera rotation variables
-  let isRotating = false;
-  let mouseX = 0;
-  let mouseY = 0;
-  let targetRotationX = 0;
-  let targetRotationY = 0;
-  let currentRotationX = 0;
-  let currentRotationY = 0;
-  let meshRef: THREE.Mesh | null = null;
-  let resizeObserver: ResizeObserver | null = null;
-
-  const handleMouseDown = (event: MouseEvent) => {
-    // Only enable camera rotation when right mouse button is pressed or when holding Ctrl
-    if (event.button === 2 || event.ctrlKey) {
-      isRotating = true;
-      mouseX = event.clientX;
-      mouseY = event.clientY;
-      // Notify about rotation start
-      if (onCameraChange) {
-        const azimuth = Math.atan2(camera.position.x, camera.position.z);
-        const elevation = Math.asin(camera.position.y / camera.position.length());
-        onCameraChange(azimuth, elevation, true);
-      }
-    }
+  const dimensions = new THREE.Group();
+  scene.add(dimensions);
+  const dimensionMaterial = new THREE.LineBasicMaterial({ color: 0x5777a1, depthTest: false, transparent: true, opacity: 0.8 });
+  const dimensionLines = new THREE.LineSegments(new THREE.BufferGeometry(), dimensionMaterial);
+  dimensionLines.renderOrder = 2;
+  dimensions.add(dimensionLines);
+  const dimensionLabels = ['Width', 'Depth', 'Height'].map(name => {
+    const element = document.createElement('div');
+    element.className = 'viewer-dimension';
+    element.setAttribute('aria-label', name);
+    const label = new CSS2DObject(element);
+    dimensions.add(label);
+    return label;
+  });
+  let mesh: THREE.Mesh | undefined;
+  const previousMatrix = new THREE.Matrix4();
+  let previousMesh: THREE.Mesh | undefined;
+  let showDimensions = true;
+  const updateDimensions = () => {
+    dimensions.visible = showDimensions && !!mesh?.visible && !!mesh.parent;
+    if (!dimensions.visible) return;
+    mesh!.updateWorldMatrix(true, false);
+    if (previousMesh === mesh && previousMatrix.equals(mesh!.matrixWorld)) return;
+    previousMesh = mesh;
+    previousMatrix.copy(mesh!.matrixWorld);
+    // Measure vertices, not a rotated local bounding box; cache until the part moves.
+    const box = new THREE.Box3().setFromObject(mesh!, true);
+    const { min, max } = box;
+    const size = box.getSize(new THREE.Vector3());
+    const gap = Math.max(size.x, size.y, size.z) * 0.12;
+    const pairs = [
+      [new THREE.Vector3(min.x, min.y, max.z + gap), new THREE.Vector3(max.x, min.y, max.z + gap)],
+      [new THREE.Vector3(max.x + gap, min.y, min.z), new THREE.Vector3(max.x + gap, min.y, max.z)],
+      [new THREE.Vector3(min.x - gap, min.y, min.z), new THREE.Vector3(min.x - gap, max.y, min.z)]
+    ];
+    const anchors = [
+      [new THREE.Vector3(min.x, min.y, max.z), new THREE.Vector3(max.x, min.y, max.z)],
+      [new THREE.Vector3(max.x, min.y, min.z), new THREE.Vector3(max.x, min.y, max.z)],
+      [new THREE.Vector3(min.x, min.y, min.z), new THREE.Vector3(min.x, max.y, min.z)]
+    ];
+    const points: THREE.Vector3[] = [];
+    pairs.forEach(([a, b], index) => {
+      points.push(a, b, anchors[index][0], a, anchors[index][1], b);
+      dimensionLabels[index].position.copy(a).lerp(b, 0.5);
+      dimensionLabels[index].element.textContent = `${['W', 'D', 'H'][index]} ${[size.x, size.z, size.y][index].toFixed(2)} mm`;
+    });
+    dimensionLines.geometry.dispose();
+    dimensionLines.geometry = new THREE.BufferGeometry().setFromPoints(points);
   };
-
-  const handleMouseMove = (event: MouseEvent) => {
-    if (!isRotating) return;
-    
-    const deltaX = event.clientX - mouseX;
-    const deltaY = event.clientY - mouseY;
-    
-    // Rotate camera around the scene
-    targetRotationY += deltaX * 0.01;
-    targetRotationX += deltaY * 0.01;
-    
-    mouseX = event.clientX;
-    mouseY = event.clientY;
-  };
-
-  const handleMouseUp = () => {
-    isRotating = false;
-    // Notify about rotation end
-    if (onCameraChange) {
-      const azimuth = Math.atan2(camera.position.x, camera.position.z);
-      const elevation = Math.asin(camera.position.y / camera.position.length());
-      onCameraChange(azimuth, elevation, false);
-    }
-  };
-
-  const handleWheel = (event: WheelEvent) => {
-    event.preventDefault();
-    const delta = event.deltaY * 0.01;
-    camera.position.multiplyScalar(1 + delta * 0.1);
-    camera.position.clampLength(50, 800);
-  };
-
-  const handleContextMenu = (event: MouseEvent) => {
-    event.preventDefault(); // Prevent right-click context menu
-  };
-
-  renderer.domElement.addEventListener('mousedown', handleMouseDown);
-  renderer.domElement.addEventListener('mousemove', handleMouseMove);
-  renderer.domElement.addEventListener('mouseup', handleMouseUp);
-  renderer.domElement.addEventListener('wheel', handleWheel);
-  renderer.domElement.addEventListener('contextmenu', handleContextMenu);
-
-  const controls: OrbitControls = {
-    enabled: true,
-    dispose: () => {
-      renderer.domElement.removeEventListener('mousedown', handleMouseDown);
-      renderer.domElement.removeEventListener('mousemove', handleMouseMove);
-      renderer.domElement.removeEventListener('mouseup', handleMouseUp);
-      renderer.domElement.removeEventListener('wheel', handleWheel);
-      renderer.domElement.removeEventListener('contextmenu', handleContextMenu);
-      window.removeEventListener('resize', handleResize);
-      if (resizeObserver) resizeObserver.disconnect();
-    }
-  };
-
-  // Animation loop
-  const animate = () => {
-    requestAnimationFrame(animate);
-    
-    // Smooth camera rotation
-    currentRotationX += (targetRotationX - currentRotationX) * 0.1;
-    currentRotationY += (targetRotationY - currentRotationY) * 0.1;
-    
-    // Apply rotation to camera position around the origin
-    const radius = camera.position.length();
-    camera.position.x = radius * Math.sin(currentRotationY) * Math.cos(currentRotationX);
-    camera.position.y = radius * Math.sin(currentRotationX);
-    camera.position.z = radius * Math.cos(currentRotationY) * Math.cos(currentRotationX);
-    camera.lookAt(0, 0, 50); // Look at the center of the build platform
-    
-    // Notify about camera position changes during rotation
-    if (isRotating && onCameraChange) {
-      const azimuth = Math.atan2(camera.position.x, camera.position.z);
-      const elevation = Math.asin(camera.position.y / camera.position.length());
-      onCameraChange(azimuth, elevation, true);
-    }
-    
-    renderer.render(scene, camera);
-  };
-
-  const handleResize = () => {
-    const newWidth = container.clientWidth;
-    const newHeight = container.clientHeight;
-
-    // Adaptive FOV (wider on small screens)
-    const shortest = Math.min(newWidth, newHeight);
-    camera.fov = shortest < 480 ? 80 : shortest < 768 ? 70 : 60;
-
-    camera.aspect = newWidth / newHeight;
+  const resize = () => {
+    const width = Math.max(container.clientWidth, 1);
+    const height = Math.max(container.clientHeight, 1);
+    aspect = width / height;
+    camera.left = -halfHeight * aspect;
+    camera.right = halfHeight * aspect;
+    camera.top = halfHeight;
+    camera.bottom = -halfHeight;
     camera.updateProjectionMatrix();
-    renderer.setSize(newWidth, newHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(width, height);
+    labels.setSize(width, height);
   };
-
-  window.addEventListener('resize', handleResize);
-  resizeObserver = new ResizeObserver(() => handleResize());
-  resizeObserver.observe(container);
-
+  const observer = new ResizeObserver(resize);
+  observer.observe(container);
+  resize();
+  let frame = 0;
+  let disposed = false;
+  const animate = () => {
+    if (disposed) return;
+    controls.update();
+    updateDimensions();
+    renderer.render(scene, camera);
+    labels.render(scene, camera);
+    frame = requestAnimationFrame(animate);
+  };
   const refs: SceneRefs = {
-    scene,
-    camera,
-    renderer,
-    grid,
-    get mesh() { return meshRef || undefined; },
-    set mesh(mesh: THREE.Mesh | undefined) { meshRef = mesh || null; },
-    showGrid: () => {
-      if (!scene.children.includes(grid)) {
-        scene.add(grid);
-      }
-      grid.visible = true;
+    scene, camera, renderer, grid,
+    get mesh() { return mesh; },
+    set mesh(value) { mesh = value; previousMesh = undefined; },
+    setDimensionsVisible: visible => { showDimensions = visible; },
+    showGrid: () => { grid.visible = true; },
+    hideGrid: () => { grid.visible = false; },
+    repositionGrid: (x, y, z) => grid.position.set(x, y, z),
+    fit: (object, view = 'iso') => {
+      const box = object ? new THREE.Box3().setFromObject(object) : new THREE.Box3(new THREE.Vector3(-128, 0, -128), new THREE.Vector3(128, 80, 128));
+      const sphere = box.getBoundingSphere(new THREE.Sphere());
+      // Keep engineering views free of perspective distortion, with room for dimensions.
+      halfHeight = Math.max(sphere.radius, 1) * 1.4 / Math.min(aspect, 1);
+      const distance = Math.max(sphere.radius, 1) * 4;
+      camera.zoom = 1;
+      resize();
+      const directions = { iso: new THREE.Vector3(1, 0.8, 1), front: new THREE.Vector3(0, 0, 1), top: new THREE.Vector3(0, 1, 0.00001), right: new THREE.Vector3(1, 0, 0) };
+      controls.target.copy(sphere.center);
+      camera.position.copy(sphere.center).addScaledVector(directions[view].normalize(), distance);
+      camera.near = Math.max(distance / 10000, 0.001);
+      camera.far = distance * 100;
+      controls.maxDistance = distance * 20;
+      camera.updateProjectionMatrix();
+      controls.update();
     },
-    hideGrid: () => {
-      grid.visible = false;
+    zoom: factor => {
+      camera.zoom = THREE.MathUtils.clamp(camera.zoom / factor, controls.minZoom, controls.maxZoom);
+      camera.updateProjectionMatrix();
+      controls.update();
     },
-    repositionGrid: (x: number, y: number, z: number) => {
-      grid.position.set(x, y, z);
-    },
-    onCameraChange
+    dispose: () => {
+      disposed = true;
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      controls.dispose();
+      scene.traverse(object => {
+        const drawable = object as THREE.Mesh;
+        drawable.geometry?.dispose();
+        const materials = Array.isArray(drawable.material) ? drawable.material : [drawable.material];
+        materials.filter(Boolean).forEach(material => {
+          (material as THREE.MeshBasicMaterial).map?.dispose();
+          material.dispose();
+        });
+      });
+      renderer.dispose();
+      renderer.domElement.remove();
+      labels.domElement.remove();
+    }
   };
-
   return { refs, controls, animate };
 };

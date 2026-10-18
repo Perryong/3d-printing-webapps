@@ -1,0 +1,5 @@
+{
+  "functions": {"source": "functions", "runtime": "nodejs22", "codebase": "print-checkout"},
+  "firestore": {"rules": "firestore.rules", "indexes": "firestore.indexes.json"},
+  "storage": {"target": "print-checkout", "rules": "storage.rules"}
+}

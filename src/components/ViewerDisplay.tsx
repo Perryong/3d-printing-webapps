@@ -7,7 +7,7 @@ interface ViewerDisplayProps {
   fileName: string;
   isLoading: boolean;
   error: string;
-  onMountReady: (element: HTMLDivElement) => void;
+  onMountReady: (element: HTMLDivElement) => (() => void);
 }
 
 const ViewerDisplay: React.FC<ViewerDisplayProps> = ({
@@ -20,14 +20,18 @@ const ViewerDisplay: React.FC<ViewerDisplayProps> = ({
   const mountRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (mountRef.current && slicingMethod !== 'gcode') {
-      onMountReady(mountRef.current);
+    if (mountRef.current) {
+      return onMountReady(mountRef.current);
     }
-  }, [onMountReady, slicingMethod]);
+  }, [onMountReady]);
 
   return (
     <div className="flex-1 relative min-h-0">
-      {slicingMethod !== 'gcode' && <div ref={mountRef} className="w-full h-full" />}
+      <div ref={mountRef} className={`absolute inset-0 ${slicingMethod === 'gcode' ? 'invisible' : ''}`} />
+      {slicingMethod !== 'gcode' && fileName && <div className="pointer-events-none absolute bottom-3 left-3 right-3 flex flex-wrap justify-between gap-2 text-xs text-slate-600">
+        <span className="rounded bg-white/90 px-2 py-1">Drag: orbit · Right drag: pan · Scroll: zoom</span>
+        <span className="rounded bg-white/90 px-2 py-1">Overall bounds · STL units assumed mm</span>
+      </div>}
       
       {/* G-code Display */}
       {slicingMethod === 'gcode' && (
@@ -69,7 +73,7 @@ const ViewerDisplay: React.FC<ViewerDisplayProps> = ({
             <p className="mb-4">Load a 3D model file for viewing and print time estimation</p>
             <div className="text-sm space-y-2">
               <p><strong>STL Files:</strong> 3D model visualization + estimated print time</p>
-              <p><strong>G-code Files:</strong> Accurate print time from sliced file</p>
+              <p><strong>G-code Files:</strong> Approximate analysis — owner slicing confirmation required</p>
               <p className="mt-4"><strong>Controls:</strong></p>
               <p>• Mouse drag to rotate • Mouse wheel to zoom</p>
               <p>• Optimized for Bambu Lab A1 printer specs</p>

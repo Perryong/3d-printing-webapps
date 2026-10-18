@@ -1,5 +1,8 @@
 
 export interface GCodeAnalysis {
+  source: 'preliminary';
+  requiresConfirmation: true;
+  warnings: string[];
   totalTime: number;
   layers: number;
   materialUsed: {
@@ -74,6 +77,7 @@ export const analyzeGCode = (gcodeContent: string): GCodeAnalysis => {
   const filamentWeight = filamentVolume * 0.00124;
   
   return {
+    source:'preliminary', requiresConfirmation:true, warnings:['G-code parser is approximate. Confirm full batch time and filament in Bambu Studio.'],
     totalTime,
     layers,
     materialUsed: {

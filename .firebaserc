@@ -1,0 +1,13 @@
+{
+  "projects": {},
+  "targets": {
+    "task-list-6a69a": {
+      "storage": {
+        "print-checkout": [
+          "task-list-6a69a-print-checkout"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

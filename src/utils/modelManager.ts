@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 
+export type DisplayMode = 'solid' | 'edges' | 'wireframe' | 'xray';
+
 export interface ModelTransform {
   position: { x: number; y: number; z: number };
   rotation: { x: number; y: number; z: number };
@@ -17,6 +19,7 @@ export interface ModelData {
 }
 
 export class ModelManager {
+  private displayMode: DisplayMode = 'edges';
   private models: Map<string, ModelData> = new Map();
   private selectedModelId: string | null = null;
   private raycaster = new THREE.Raycaster();
@@ -28,15 +31,20 @@ export class ModelManager {
   private isHovering = false;
   private hoveredModelId: string | null = null;
   private originalTransformMode: 'select' | 'move' | 'rotate' | 'scale' = 'select';
+  private readonly mouseDown = this.onMouseDown.bind(this);
+  private readonly mouseMove = this.onMouseMove.bind(this);
+  private readonly mouseUp = this.onMouseUp.bind(this);
+  private readonly mouseClick = this.onMouseClick.bind(this);
+  private pointerStart = new THREE.Vector2();
   private repositionGridCallback?: (x: number, y: number, z: number) => void;
 
   constructor(
     private scene: THREE.Scene,
     private camera: THREE.Camera,
-    private renderer: THREE.WebGLRenderer
+    private renderer: THREE.WebGLRenderer,
+    private onChange?: () => void
   ) {
     this.setupEventListeners();
-    this.setupCursorStyles();
   }
 
   setGridRepositionCallback(callback: (x: number, y: number, z: number) => void): void {
@@ -44,37 +52,26 @@ export class ModelManager {
   }
 
   private setupEventListeners() {
-    this.renderer.domElement.addEventListener('mousedown', this.onMouseDown.bind(this));
-    this.renderer.domElement.addEventListener('mousemove', this.onMouseMove.bind(this));
-    this.renderer.domElement.addEventListener('mouseup', this.onMouseUp.bind(this));
-    this.renderer.domElement.addEventListener('click', this.onMouseClick.bind(this));
-  }
-
-  private setupCursorStyles() {
-    // Add CSS for cursor styles
-    const style = document.createElement('style');
-    style.textContent = `
-      .model-hover { cursor: grab !important; }
-      .model-dragging { cursor: grabbing !important; }
-      .model-locked { cursor: not-allowed !important; }
-    `;
-    document.head.appendChild(style);
+    this.renderer.domElement.addEventListener('mousedown', this.mouseDown);
+    this.renderer.domElement.addEventListener('mousemove', this.mouseMove);
+    window.addEventListener('mouseup', this.mouseUp);
+    this.renderer.domElement.addEventListener('click', this.mouseClick);
   }
 
   private updateCursor() {
     const canvas = this.renderer.domElement;
     
     if (this.isDragging) {
-      canvas.className = 'model-dragging';
+      canvas.style.cursor = 'grabbing';
     } else if (this.hoveredModelId) {
       const model = this.models.get(this.hoveredModelId);
       if (model?.locked) {
-        canvas.className = 'model-locked';
+        canvas.style.cursor = 'not-allowed';
       } else {
-        canvas.className = 'model-hover';
+        canvas.style.cursor = 'grab';
       }
     } else {
-      canvas.className = '';
+      canvas.style.cursor = '';
     }
   }
 
@@ -94,8 +91,11 @@ export class ModelManager {
 
   addModel(id: string, name: string, geometry: THREE.BufferGeometry): ModelData {
     const material = new THREE.MeshPhongMaterial({
-      color: 0x2196f3,
-      shininess: 100,
+      color: 0xb7bdc5,
+      shininess: 22,
+      polygonOffset: true,
+      polygonOffsetFactor: 1,
+      polygonOffsetUnits: 1,
       side: THREE.DoubleSide
     });
 
@@ -104,27 +104,16 @@ export class ModelManager {
     mesh.receiveShadow = true;
     mesh.userData.modelId = id;
 
-    // Calculate bounding box to center the model
-    geometry.computeBoundingBox();
-    const box = geometry.boundingBox!;
-    
-    // Calculate center and size
-    const center = new THREE.Vector3();
-    box.getCenter(center);
-    const size = new THREE.Vector3();
-    box.getSize(size);
-    
-    // Position model at grid center (0, 0) and place bottom on build plate (z = 0)
-    const centeredPosition = new THREE.Vector3(
-      -center.x, // Center X
-      -center.y, // Center Y  
-      -box.min.z  // Bottom of model sits on build plate (z = 0)
+    mesh.rotation.set(-Math.PI / 2, 0, 0);
+    const box = new THREE.Box3().setFromObject(mesh);
+    const center = box.getCenter(new THREE.Vector3());
+    mesh.position.set(-center.x, -box.min.y, -center.z);
+    const edges = new THREE.LineSegments(
+      new THREE.EdgesGeometry(mesh.geometry, 25),
+      new THREE.LineBasicMaterial({ color: 0x48515e })
     );
-    
-    mesh.position.copy(centeredPosition);
-    
-    // Set default rotation with X at -90 degrees
-    mesh.rotation.set(-Math.PI / 2, 0, 0); // -90 degrees in radians for X axis
+    mesh.add(edges);
+    this.applyDisplayMode(mesh);
 
     this.scene.add(mesh);
 
@@ -144,11 +133,32 @@ export class ModelManager {
     return modelData;
   }
 
+  setDisplayMode(mode: DisplayMode): void {
+    this.displayMode = mode;
+    this.models.forEach(model => this.applyDisplayMode(model.mesh));
+  }
+
+  private applyDisplayMode(mesh: THREE.Mesh): void {
+    const material = mesh.material as THREE.MeshPhongMaterial;
+    material.wireframe = this.displayMode === 'wireframe';
+    material.transparent = this.displayMode === 'xray';
+    material.opacity = this.displayMode === 'xray' ? 0.3 : 1;
+    material.depthWrite = this.displayMode !== 'xray';
+    material.needsUpdate = true;
+    mesh.children[0].visible = this.displayMode === 'edges';
+  }
+
   removeModel(id: string): boolean {
     const model = this.models.get(id);
     if (!model) return false;
 
     this.scene.remove(model.mesh);
+    model.mesh.children.forEach(child => {
+      const edge = child as THREE.LineSegments;
+      edge.geometry.dispose();
+      (edge.material as THREE.Material).dispose();
+    });
+    model.originalGeometry.dispose();
     model.mesh.geometry.dispose();
     if (Array.isArray(model.mesh.material)) {
       model.mesh.material.forEach(mat => mat.dispose());
@@ -166,11 +176,12 @@ export class ModelManager {
   }
 
   selectModel(id: string | null): void {
+    if (id === this.selectedModelId) return;
     // Deselect previous model
     if (this.selectedModelId) {
       const prevModel = this.models.get(this.selectedModelId);
       if (prevModel) {
-        (prevModel.mesh.material as THREE.MeshPhongMaterial).color.setHex(0x2196f3);
+        ((prevModel.mesh.children[0] as THREE.LineSegments).material as THREE.LineBasicMaterial).color.setHex(0x48515e);
       }
     }
 
@@ -180,9 +191,10 @@ export class ModelManager {
     if (id) {
       const model = this.models.get(id);
       if (model) {
-        (model.mesh.material as THREE.MeshPhongMaterial).color.setHex(0xffa500);
+        ((model.mesh.children[0] as THREE.LineSegments).material as THREE.LineBasicMaterial).color.setHex(0x2563eb);
       }
     }
+    this.onChange?.();
   }
 
   getSelectedModel(): ModelData | null {
@@ -198,7 +210,7 @@ export class ModelManager {
     
     // Position the copy with small offset from center
     const newTransform = {
-      position: { x: 20, y: 0, z: 0 }, // Small offset from center
+      position: { ...original.transform.position, x: original.transform.position.x + 20 }, // Small offset from center
       rotation: { ...original.transform.rotation },
       scale: { ...original.transform.scale }
     };
@@ -248,6 +260,7 @@ export class ModelManager {
   }
 
   updateModelProperty(id: string, property: 'position' | 'rotation' | 'scale', axis: 'x' | 'y' | 'z', value: number): void {
+    if (!Number.isFinite(value) || (property === 'scale' && value <= 0)) return;
     const model = this.models.get(id);
     if (!model || model.locked) return;
 
@@ -262,23 +275,13 @@ export class ModelManager {
     const model = this.models.get(id);
     if (!model || model.locked) return;
 
-    // Calculate bounding box to re-center the model
-    model.originalGeometry.computeBoundingBox();
-    const box = model.originalGeometry.boundingBox!;
-    
-    // Calculate center position
-    const center = new THREE.Vector3();
-    box.getCenter(center);
-    
-    // Reset to centered position with bottom on build plate
-    const defaultTransform: ModelTransform = {
-      position: { x: -center.x, y: -center.y, z: -box.min.z },
-      rotation: { x: -Math.PI / 2, y: 0, z: 0 },
-      scale: { x: 1, y: 1, z: 1 }
-    };
-
-    model.transform = defaultTransform;
-    this.updateMeshFromTransform(model.mesh, model.transform);
+    model.mesh.position.set(0, 0, 0);
+    model.mesh.rotation.set(-Math.PI / 2, 0, 0);
+    model.mesh.scale.set(1, 1, 1);
+    const box = new THREE.Box3().setFromObject(model.mesh);
+    const center = box.getCenter(new THREE.Vector3());
+    model.mesh.position.set(-center.x, -box.min.y, -center.z);
+    model.transform = this.meshToTransform(model.mesh);
   }
 
   getAllModels(): ModelData[] {
@@ -286,11 +289,13 @@ export class ModelManager {
   }
 
   private onMouseDown(event: MouseEvent): void {
+    this.pointerStart.set(event.clientX, event.clientY);
+    if (event.button !== 0 || event.ctrlKey || event.metaKey || this.transformMode !== "move") return;
     this.updateMousePosition(event);
     this.raycaster.setFromCamera(this.mouse, this.camera);
     
     const meshes = Array.from(this.models.values()).map(model => model.mesh);
-    const intersects = this.raycaster.intersectObjects(meshes);
+    const intersects = this.raycaster.intersectObjects(meshes.filter(mesh => mesh.visible), false);
     
     if (intersects.length > 0) {
       const clickedMesh = intersects[0].object as THREE.Mesh;
@@ -306,9 +311,9 @@ export class ModelManager {
         this.isDragging = true;
         
         // Calculate intersection with build platform
-        const buildPlatform = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+        const buildPlatform = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
         const intersection = new THREE.Vector3();
-        this.raycaster.ray.intersectPlane(buildPlatform, intersection);
+        if (!this.raycaster.ray.intersectPlane(buildPlatform, intersection)) return;
         
         this.dragStart.copy(intersection);
         this.modelStartPosition.copy(model.mesh.position);
@@ -326,9 +331,9 @@ export class ModelManager {
       if (!selectedModel || selectedModel.locked) return;
 
       this.raycaster.setFromCamera(this.mouse, this.camera);
-      const buildPlatform = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0);
+      const buildPlatform = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
       const intersection = new THREE.Vector3();
-      this.raycaster.ray.intersectPlane(buildPlatform, intersection);
+      if (!this.raycaster.ray.intersectPlane(buildPlatform, intersection)) return;
       
       const delta = intersection.clone().sub(this.dragStart);
       const newPosition = this.modelStartPosition.clone().add(delta);
@@ -336,11 +341,12 @@ export class ModelManager {
       // Update both mesh and transform state
       selectedModel.mesh.position.copy(newPosition);
       selectedModel.transform.position = { x: newPosition.x, y: newPosition.y, z: newPosition.z };
+      this.onChange?.();
     } else {
       // Handle hover effects
       this.raycaster.setFromCamera(this.mouse, this.camera);
       const meshes = Array.from(this.models.values()).map(model => model.mesh);
-      const intersects = this.raycaster.intersectObjects(meshes);
+      const intersects = this.raycaster.intersectObjects(meshes.filter(mesh => mesh.visible), false);
       
       const previousHoveredId = this.hoveredModelId;
       
@@ -368,6 +374,7 @@ export class ModelManager {
   }
 
   private onMouseClick(event: MouseEvent): void {
+    if (event.button !== 0 || this.pointerStart.distanceTo(new THREE.Vector2(event.clientX, event.clientY)) > 4) return;
     // Only handle selection if we're not dragging and in select mode
     if (this.transformMode !== 'select' && !this.isDragging) return;
 
@@ -375,7 +382,7 @@ export class ModelManager {
     this.raycaster.setFromCamera(this.mouse, this.camera);
     
     const meshes = Array.from(this.models.values()).map(model => model.mesh);
-    const intersects = this.raycaster.intersectObjects(meshes);
+    const intersects = this.raycaster.intersectObjects(meshes.filter(mesh => mesh.visible), false);
     
     if (intersects.length > 0) {
       const clickedMesh = intersects[0].object as THREE.Mesh;
@@ -393,21 +400,11 @@ export class ModelManager {
   }
 
   dispose(): void {
-    this.renderer.domElement.removeEventListener('mousedown', this.onMouseDown.bind(this));
-    this.renderer.domElement.removeEventListener('mousemove', this.onMouseMove.bind(this));
-    this.renderer.domElement.removeEventListener('mouseup', this.onMouseUp.bind(this));
-    this.renderer.domElement.removeEventListener('click', this.onMouseClick.bind(this));
+    this.renderer.domElement.removeEventListener('mousedown', this.mouseDown);
+    this.renderer.domElement.removeEventListener('mousemove', this.mouseMove);
+    window.removeEventListener('mouseup', this.mouseUp);
+    this.renderer.domElement.removeEventListener('click', this.mouseClick);
     
-    // Clean up all models
-    this.models.forEach(model => {
-      this.scene.remove(model.mesh);
-      model.mesh.geometry.dispose();
-      if (Array.isArray(model.mesh.material)) {
-        model.mesh.material.forEach(mat => mat.dispose());
-      } else {
-        model.mesh.material.dispose();
-      }
-    });
-    this.models.clear();
+    for (const id of this.models.keys()) this.removeModel(id);
   }
 }
