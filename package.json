@@ -13,7 +13,8 @@
     "dev:emulator": "node scripts/emulators.mjs dev",
     "seed:emulator": "node scripts/seed-emulators.mjs",
     "test:emulator": "npm --prefix functions run build && node scripts/emulators.mjs test",
-    "test:e2e": "npm --prefix functions run build && node scripts/emulators.mjs e2e"
+    "test:e2e": "npm --prefix functions run build && node scripts/emulators.mjs e2e",
+    "deploy:checkout": "npm --prefix functions run build && firebase deploy --project task-list-6a69a --config firebase.production.json --only firestore,storage,functions:print-checkout"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",

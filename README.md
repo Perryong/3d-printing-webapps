@@ -333,3 +333,21 @@ configuration); this change introduces no lint errors. The independent review's
 receipt reuse and actual-cost reload findings were reproduced and fixed.
 Bank transaction references are unique across this single-merchant installation,
 so changing QR images or PayNow identifier formatting cannot reuse a receipt.
+
+### Production checkout (Task-list shared project)
+
+The Vercel production site uses `task-list-6a69a` with a dedicated protected
+Storage bucket, `task-list-6a69a-print-checkout`, and Firestore in Singapore.
+The legacy default bucket and its existing rules are not part of checkout.
+Use `npm run deploy:checkout` for backend updates; do not deploy the default
+`firebase.json` storage configuration into this shared production project.
+Set `CHECKOUT_STORAGE_BUCKET=task-list-6a69a-print-checkout` in the ignored
+`functions/.env.task-list-6a69a` before deploying. Client configuration is managed
+in Vercel's production `VITE_CHECKOUT_*` variables.
+
+Owner access is granted through a server-side custom claim. At `/owner`, enter
+your approved email and use **Set or reset password** to set a password through
+your inbox. Never share the password. Confirm the sliced quote first; customers
+then accept it, scan the bank-issued QR, enter the exact total and use the order
+reference. Their payment claim remains pending until you match the amount and
+reference against your bank transactions and approve it in the dashboard.

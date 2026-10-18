@@ -9,7 +9,7 @@ import {
 import { createHash } from "node:crypto";
 import { z } from "zod";
 initializeApp({
-  storageBucket: process.env.GCLOUD_PROJECT + ".firebasestorage.app",
+  storageBucket: process.env.CHECKOUT_STORAGE_BUCKET || process.env.GCLOUD_PROJECT + ".firebasestorage.app",
 });
 export const db = getFirestore();
 export const bucket = () => getStorage().bucket();

@@ -3,6 +3,7 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
+  sendPasswordResetEmail,
 } from "firebase/auth";
 import { checkoutAuth, checkoutMode } from "../lib/firebase";
 import OwnerSettings from "../components/owner/OwnerSettings";
@@ -13,6 +14,7 @@ export default function Owner() {
     [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
     [error, setError] = useState(""),
+    [notice, setNotice] = useState(""),
     [busy, setBusy] = useState(false);
   useEffect(() => {
     if (!checkoutAuth) return;
@@ -86,9 +88,18 @@ export default function Owner() {
               />
             </label>
             <button disabled={busy}>Sign in</button>
+            <button type="button" className="secondary" disabled={busy || !email.trim()} onClick={async () => {
+              setBusy(true); setError(""); setNotice("");
+              try {
+                await sendPasswordResetEmail(checkoutAuth!, email.trim());
+                setNotice("If this email has an account, a password setup/reset link has been sent. Check your inbox and spam folder.");
+              } catch { setError("Unable to send the password link. Check your email and try again."); }
+              finally { setBusy(false); }
+            }}>Set or reset password</button>
           </form>
         </section>
       )}
+      {notice && <p role="status">{notice}</p>}
       {error && <p role="alert">{error}</p>}
     </main>
   );
