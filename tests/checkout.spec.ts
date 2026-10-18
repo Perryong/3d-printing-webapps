@@ -134,17 +134,17 @@ test("viewer checkout, delivery and manual payment persist across reload", async
   await page.getByRole("button", { name: /Accept quote/ }).click();
   await expect(page.getByText("LOCAL DEMO — do not send money")).toBeVisible();
   await page
-    .getByRole("button", { name: "I've paid — request verification" })
+    .getByRole("button", { name: "I have completed the bank transfer" })
     .click();
   await expect(
-    page.getByText("Awaiting verification", { exact: true }),
+    page.getByText("Waiting for owner verification", { exact: true }),
   ).toBeVisible();
   await page.reload();
   await page
     .getByRole("button", { name: "Get print quote / My orders" })
     .click();
   await expect(
-    page.getByText("Awaiting verification", { exact: true }),
+    page.getByText("Waiting for owner verification", { exact: true }),
   ).toBeVisible();
   await page.screenshot({
     path: `test-results/${info.project.name}-verification.png`,

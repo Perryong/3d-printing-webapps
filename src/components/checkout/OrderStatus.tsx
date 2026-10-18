@@ -54,7 +54,7 @@ export default function OrderStatus({ orderId }: { orderId: string }) {
         {order.cancelled
           ? `Cancelled · refund ${order.refundState}`
           : order.paymentState === "verification_pending"
-            ? "Awaiting verification"
+            ? "Waiting for owner verification"
             : order.paymentState === "paid"
               ? `Paid · ${order.fulfilmentState}`
               : order.quoteState === "requested"
@@ -95,7 +95,7 @@ export default function OrderStatus({ orderId }: { orderId: string }) {
               act("claimPayment", { transferReference: reference })
             }
           >
-            I've paid — request verification
+            I have completed the bank transfer
           </button>
         </>
       )}
