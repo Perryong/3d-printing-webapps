@@ -1,4 +1,5 @@
 
+import type { JobTotals } from '../../shared/pricing';
 import * as THREE from 'three';
 
 export interface PrintSettings {
@@ -16,6 +17,9 @@ export interface PrintSettings {
 }
 
 export interface PrintEstimate {
+  source: 'preliminary';
+  requiresConfirmation: true;
+  warnings: string[];
   totalTime: number;
   layers: number;
   materialUsed: {
@@ -32,15 +36,12 @@ export interface PrintEstimate {
 }
 
 export const estimatePrintTime = (geometry: THREE.BufferGeometry, settings: PrintSettings): PrintEstimate | null => {
-  if (!geometry) return null;
+  if (!geometry?.getAttribute('position')?.count) return null;
+  if (![settings.layerHeight, settings.nozzleDiameter, settings.printSpeed, settings.outerWallSpeed, settings.infillSpeed, settings.travelSpeed].every(n => Number.isFinite(n) && n > 0) || !Number.isFinite(settings.infillDensity) || settings.infillDensity < 0 || settings.infillDensity > 100) return null;
+  geometry.computeBoundingBox();
+  const size = geometry.boundingBox!.getSize(new THREE.Vector3());
+  if (![size.x, size.y, size.z].every(n => Number.isFinite(n) && n > 0)) return null;
 
-  const boundingBox = geometry.boundingBox;
-  if (!boundingBox) {
-    geometry.computeBoundingBox();
-  }
-  
-  const size = boundingBox!.getSize(new THREE.Vector3());
-  
   // Calculate layers
   const layers = Math.ceil(size.z / settings.layerHeight);
   
@@ -55,7 +56,7 @@ export const estimatePrintTime = (geometry: THREE.BufferGeometry, settings: Prin
   
   // Time calculations per layer
   const outerWallTime = perimeter / settings.outerWallSpeed;
-  const infillTime = infillArea / settings.infillSpeed;
+  const infillTime = infillArea / (settings.nozzleDiameter * 1.2) / settings.infillSpeed;
   const travelTime = (perimeter * 0.3) / settings.travelSpeed;
   
   const timePerLayer = outerWallTime + infillTime + travelTime;
@@ -78,6 +79,8 @@ export const estimatePrintTime = (geometry: THREE.BufferGeometry, settings: Prin
   const filamentWeight = totalExtrusionVolume * 0.00124; // PLA density
   
   return {
+    source: 'preliminary', requiresConfirmation: true,
+    warnings: ['Bounding-box approximation; supports and purge require confirmation in Bambu Studio.'],
     totalTime: finalTime,
     layers,
     materialUsed: {
@@ -93,3 +96,7 @@ export const estimatePrintTime = (geometry: THREE.BufferGeometry, settings: Prin
     }
   };
 };
+
+export function toPreliminaryJob(estimate: Pick<PrintEstimate, 'totalTime' | 'materialUsed'>, quantity: number): JobTotals {
+  return { source:'preliminary', hours:estimate.totalTime/3600, grams:estimate.materialUsed.weight, quantity, scope:'per-item' };
+}

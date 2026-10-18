@@ -26,7 +26,7 @@ const PrintTimeDisplay: React.FC<PrintTimeDisplayProps> = ({
   if (!estimate) return null;
 
   // Calculate model weight from volume (using PLA density: 1.24 g/cm³)
-  const modelWeight = modelVolume * 1.24;
+  const modelWeight = estimate.materialUsed.weight;
 
   return (
     <div className="bg-gray-800 border-b border-gray-700 p-4">
@@ -38,7 +38,7 @@ const PrintTimeDisplay: React.FC<PrintTimeDisplayProps> = ({
               <span className="text-lg font-semibold text-white">
                 {formatTime(estimate.totalTime)}
               </span>
-              <span className="text-sm text-gray-400 ml-2">estimated print time</span>
+              <span className="text-sm text-gray-400 ml-2">preliminary print time — owner slicing required</span>
             </div>
           </div>
           
