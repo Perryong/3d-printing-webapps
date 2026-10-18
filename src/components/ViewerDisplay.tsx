@@ -73,7 +73,7 @@ const ViewerDisplay: React.FC<ViewerDisplayProps> = ({
             <p className="mb-4">Load a 3D model file for viewing and print time estimation</p>
             <div className="text-sm space-y-2">
               <p><strong>STL Files:</strong> 3D model visualization + estimated print time</p>
-              <p><strong>G-code Files:</strong> Accurate print time from sliced file</p>
+              <p><strong>G-code Files:</strong> Approximate analysis — owner slicing confirmation required</p>
               <p className="mt-4"><strong>Controls:</strong></p>
               <p>• Mouse drag to rotate • Mouse wheel to zoom</p>
               <p>• Optimized for Bambu Lab A1 printer specs</p>

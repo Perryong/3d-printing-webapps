@@ -7,6 +7,9 @@ import { Toaster, toast } from 'sonner';
 import FileUpload from './FileUpload';
 import SettingsPanel from './SettingsPanel';
 import PrintTimeDisplay from './PrintTimeDisplay';
+import QuotePanel from './checkout/QuotePanel';
+import { STLExporter } from 'three/examples/jsm/exporters/STLExporter.js';
+import { toPreliminaryJob } from '../utils/printEstimator';
 import ViewerControls from './ViewerControls';
 import ViewerDisplay from './ViewerDisplay';
 import CameraDirectionIndicator from './CameraDirectionIndicator.tsx';
@@ -24,7 +27,7 @@ import { ModelManager, ModelData } from '../utils/modelManager';
 import { calculateMeshVolume, convertMmToCm } from '../utils/stlVolumeCalculator';
 
 // Services
-import { uploadFileToStorage } from '../services/firebaseStorage';
+
 
 // Context
 import { useApp } from '../context/AppContext';
@@ -59,6 +62,8 @@ const STLViewer: React.FC = () => {
   const [showModelControls, setShowModelControls] = useState(false);
   const [slicingMethod, setSlicingMethod] = useState<'simplified' | 'gcode'>('simplified');
   const [viewMode, setViewMode] = useState<ViewMode>('viewer');
+  const [checkoutFile, setCheckoutFile] = useState<File | null>(null);
+  const [modelRevision, setModelRevision] = useState('');
   const [models, setModels] = useState<ModelData[]>([]);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [transformMode, setTransformMode] = useState<'select' | 'move' | 'rotate' | 'scale'>('select');
@@ -120,38 +125,6 @@ const STLViewer: React.FC = () => {
     }
   }, [handleCameraChange]);
 
-  // Upload file to Firebase
-  const uploadToFirebase = async (file: File) => {
-    try {
-      dispatch({ type: 'FIREBASE_UPLOAD_START', payload: file.name });
-      toast.info(`Uploading ${file.name} to cloud storage...`);
-      
-      const uploadResult = await uploadFileToStorage(file);
-      
-      dispatch({ 
-        type: 'FIREBASE_UPLOAD_SUCCESS', 
-        payload: { 
-          fileName: file.name, 
-          metadata: {
-            ...uploadResult,
-            uploadedAt: new Date()
-          }
-        }
-      });
-      
-      toast.success(`${file.name} uploaded to cloud storage successfully!`);
-      console.log('File uploaded to Firebase:', uploadResult);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
-      dispatch({ 
-        type: 'FIREBASE_UPLOAD_ERROR', 
-        payload: { fileName: file.name, error: errorMessage }
-      });
-      toast.error(`Failed to upload ${file.name} to cloud storage: ${errorMessage}`);
-      console.error('Firebase upload error:', error);
-    }
-  };
-
   // Load STL file
   const loadSTLFile = useCallback(async (file: File) => {
     setIsLoading(true);
@@ -162,8 +135,7 @@ const STLViewer: React.FC = () => {
       dispatch({ type: 'ADD_UPLOADED_FILE', payload: file });
       toast.success(`File "${file.name}" loaded into viewer`);
 
-      // Upload to Firebase in the background
-      uploadToFirebase(file);
+      // Files remain local until a deliberate checkout submission.
 
       const arrayBuffer = await file.arrayBuffer();
       const geometry = loadSTL(arrayBuffer);
@@ -227,8 +199,7 @@ const STLViewer: React.FC = () => {
       dispatch({ type: 'ADD_UPLOADED_FILE', payload: file });
       toast.success(`File "${file.name}" loaded into viewer`);
 
-      // Upload to Firebase in the background
-      uploadToFirebase(file);
+      // Files remain local until a deliberate checkout submission.
 
       const content = await file.text();
       const analysis = analyzeGCode(content);
@@ -385,9 +356,11 @@ const STLViewer: React.FC = () => {
 
   // Use the selected, transformed part for both the header and the estimate.
   useEffect(() => {
-    if (slicingMethod !== 'simplified') return;
+    if (slicingMethod !== 'simplified') { setCheckoutFile(null); return; }
     const model = models.find(model => model.id === selectedModelId);
     if (!model) {
+      setCheckoutFile(null);
+      setModelRevision(crypto.randomUUID());
       setModelInfo(null);
       setPrintTimeEstimate(null);
       return;
@@ -404,6 +377,9 @@ const STLViewer: React.FC = () => {
       volume: convertMmToCm(calculateMeshVolume(geometry)).toFixed(2)
     });
     setPrintTimeEstimate(estimatePrintTime(geometry, printSettings));
+    const exported = new STLExporter().parse(new THREE.Mesh(geometry), {binary:true});
+    setCheckoutFile(new File([exported], 'selected-part.stl', {type:'application/octet-stream'}));
+    setModelRevision(crypto.randomUUID());
     geometry.dispose();
   }, [models, selectedModelId, printSettings, slicingMethod]);
 
@@ -622,6 +598,7 @@ const STLViewer: React.FC = () => {
               isCameraRotating={isCameraRotating}
             />
             </details>
+            <QuotePanel job={printTimeEstimate && slicingMethod === 'simplified' ? toPreliminaryJob(printTimeEstimate, 1) : null} modelFile={checkoutFile} modelRevision={modelRevision} />
             <ViewerDisplay
               slicingMethod={slicingMethod}
               fileName={fileName}
