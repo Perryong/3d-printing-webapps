@@ -1,10 +1,26 @@
-import {spawnSync} from 'node:child_process';
-import {existsSync} from 'node:fs';
-const env={...process.env};
-const java='/opt/homebrew/opt/openjdk@21';
-if(existsSync(java+'/bin/java'))env.PATH=java+'/bin:'+env.PATH;
-env.PATH=process.cwd()+'/node_modules/node/bin:'+env.PATH;
-const mode=process.argv[2];
-const args=['--project','demo-print-checkout',mode==='dev'?'emulators:start':'emulators:exec','--only','auth,firestore,functions,storage'];
-if(mode!=='dev')args.push(mode==='e2e'?'node scripts/seed-emulators.mjs && npx playwright test':'node scripts/emulator-tests.mjs');
-process.exitCode=spawnSync(process.execPath,['node_modules/firebase-tools/lib/bin/firebase.js',...args],{stdio:'inherit',env}).status??1;
+import { spawnSync } from "node:child_process";
+import { existsSync } from "node:fs";
+const env = { ...process.env };
+const java = "/opt/homebrew/opt/openjdk@21";
+if (existsSync(java + "/bin/java")) env.PATH = java + "/bin:" + env.PATH;
+env.PATH = process.cwd() + "/node_modules/node/bin:" + env.PATH;
+const mode = process.argv[2];
+const args = [
+  "--project",
+  "demo-print-checkout",
+  mode === "dev" ? "emulators:start" : "emulators:exec",
+  "--only",
+  "auth,firestore,functions,storage",
+];
+if (mode !== "dev")
+  args.push(
+    mode === "e2e"
+      ? "node scripts/seed-emulators.mjs && npx playwright test"
+      : "node scripts/emulator-tests.mjs",
+  );
+process.exitCode =
+  spawnSync(
+    process.execPath,
+    ["node_modules/firebase-tools/lib/bin/firebase.js", ...args],
+    { stdio: "inherit", env },
+  ).status ?? 1;
