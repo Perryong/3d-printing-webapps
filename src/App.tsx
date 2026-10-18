@@ -10,7 +10,7 @@ import Index from "./pages/Index";
 import Owner from './pages/Owner';
 import NotFound from "./pages/NotFound";
 
-const ReceiptDemo = import.meta.env.DEV ? lazy(() => import("./pages/ReceiptDemo")) : null;
+const ReceiptDemo = lazy(() => import("./pages/ReceiptDemo"));
 
 const queryClient = new QueryClient();
 
@@ -23,7 +23,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
-            {ReceiptDemo && <Route path="/receipt-demo" element={<Suspense fallback={<p>Loading preview…</p>}><ReceiptDemo /></Suspense>} />}
+            <Route path="/receipt-demo" element={<Suspense fallback={<p>Loading preview…</p>}><ReceiptDemo /></Suspense>} />
             <Route path="/owner" element={<Owner />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
