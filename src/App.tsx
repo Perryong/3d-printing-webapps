@@ -1,4 +1,5 @@
 
+import { lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,6 +9,8 @@ import { AppProvider } from "./context/AppContext";
 import Index from "./pages/Index";
 import Owner from './pages/Owner';
 import NotFound from "./pages/NotFound";
+
+const ReceiptDemo = import.meta.env.DEV ? lazy(() => import("./pages/ReceiptDemo")) : null;
 
 const queryClient = new QueryClient();
 
@@ -20,6 +23,7 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Index />} />
+            {ReceiptDemo && <Route path="/receipt-demo" element={<Suspense fallback={<p>Loading preview…</p>}><ReceiptDemo /></Suspense>} />}
             <Route path="/owner" element={<Owner />} />
             <Route path="*" element={<NotFound />} />
           </Routes>

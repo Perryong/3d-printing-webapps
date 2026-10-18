@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Order } from "../../../shared/orders";
 import { callCheckout, watchOrder, sgd } from "../../services/checkoutService";
+import PaymentReceipt from "./PaymentReceipt";
 import PaymentInstructions from "./PaymentInstructions";
 export default function OrderStatus({ orderId }: { orderId: string }) {
   const [order, setOrder] = useState<Order>(),
@@ -63,6 +64,7 @@ export default function OrderStatus({ orderId }: { orderId: string }) {
                   ? "Confirmed quote — review before accepting"
                   : "Awaiting payment"}
       </p>
+      <PaymentReceipt order={order} />
       {error && (
         <p role="alert" className="text-red-700">
           {error}
