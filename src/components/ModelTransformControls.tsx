@@ -70,6 +70,7 @@ const ModelTransformControls: React.FC<ModelTransformControlsProps> = ({
     const inputKey = `${type}-${axis}`;
     
     return {
+      'aria-label': `${type} ${axis.toUpperCase()}`,
       value: editingInputs[inputKey] ?? (() => {
         let currentValue;
         if (type === 'position') currentValue = position[axis];
@@ -85,6 +86,7 @@ const ModelTransformControls: React.FC<ModelTransformControlsProps> = ({
       },
       
       onBlur: () => {
+        if (editingInputs[inputKey] === undefined) return;
         const value = parseFloat(editingInputs[inputKey] || '0') || 0;
         const convertedValue = converter ? converter(value) : value;
         onChange(axis, convertedValue);
@@ -137,7 +139,7 @@ const ModelTransformControls: React.FC<ModelTransformControlsProps> = ({
       </div>
       
       {/* Action Buttons */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <button
           onClick={onMove}
           className="flex items-center gap-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-sm"
@@ -272,7 +274,7 @@ const ModelTransformControls: React.FC<ModelTransformControlsProps> = ({
       </div>
 
       {/* Model Actions */}
-      <div className="flex gap-2 pt-2 border-t border-gray-700">
+      <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-700">
         <button
           onClick={onDuplicate}
           className="flex items-center gap-1 px-3 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded text-sm"

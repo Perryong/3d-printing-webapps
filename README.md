@@ -170,3 +170,29 @@ The platform is optimized for the Bambu Lab A1 printer with these specifications
 - File API support for local file loading
 - ES2020+ JavaScript features used
 
+
+## CAD-style STL inspection
+
+The STL workspace uses neutral grey shading with sharp-edge outlines. Blue edges
+identify the selected part. Front, top, right and fit-isometric controls use
+orthographic projection; drag to orbit, right-drag to pan, and scroll to zoom.
+Choose **Move** for dragging a part on the bed, then **Orbit / select** to resume
+camera rotation. Numeric rotation and scale controls remain available.
+
+Dimension callouts show the selected part's **world-aligned overall bounds**:
+width, depth and height. They update after transforms and disappear when the part
+is hidden or deleted. STL coordinates are assumed to be millimetres; these are
+mesh bounds, not CAD feature measurements. The display uses Y-up internally and
+converts STL Z-up geometry when placing it on the printer bed.
+
+Design references: [three-cad-viewer](https://github.com/bernhard-42/three-cad-viewer)
+(separate surfaces/edges and preset cameras) and
+[chili3d](https://github.com/xiangechen/chili3d) (orthographic camera and target-based
+navigation). Neither library is added as a dependency. STEP/CAD inspection is deferred.
+
+Verification:
+
+- `npm test` checks model placement, duplication, reset, selection and scale validation.
+- `npm run build` builds the application.
+- With `npm run dev` running, open `/tests/viewer.html` for browser/WebGL checks of
+  camera fitting, zoom, dimension updates, resize and cleanup. The page title reports PASS or FAIL.
