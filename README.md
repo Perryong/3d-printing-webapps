@@ -2,6 +2,14 @@
 
 A comprehensive 3D printing platform featuring STL file visualization, print time estimation, and model management tools. Built with React, TypeScript, and Three.js, optimized for Bambu Lab A1 printer specifications.
 
+## Customer journey demo
+
+Watch the flow from STL upload and model inspection to a confirmed quote, PayNow instructions, manual payment verification, and an animated receipt.
+
+![Customer journey: STL upload, demo quote, PayNow QR, simulated verification, and animated receipt](docs/media/full-customer-journey-demo.gif)
+
+This recording uses an illustrative S$15 delivery quote and simulated payment states. No payment was made and no real customer orders were changed. The QR is shown for demonstration only—do not pay it. For real orders, the owner confirms the price after slicing and verifies the bank transfer before the receipt appears.
+
 ## ✨ Features
 
 ### 📁 File Support
