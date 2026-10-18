@@ -32,3 +32,5 @@ playwright-report/
 test-results/
 .env.local
 .emulator-seed.json
+.vercel
+.env*

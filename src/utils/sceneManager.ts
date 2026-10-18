@@ -12,6 +12,7 @@ export interface SceneRefs {
   grid?: THREE.Group;
   showGrid: () => void;
   hideGrid: () => void;
+  setDimensionsVisible: (visible: boolean) => void;
   repositionGrid: (x: number, y: number, z: number) => void;
   fit: (object?: THREE.Object3D, view?: CameraView) => void;
   zoom: (factor: number) => void;
@@ -178,8 +179,9 @@ export const createScene = (container: HTMLElement, onCameraChange?: (azimuth: n
   let mesh: THREE.Mesh | undefined;
   const previousMatrix = new THREE.Matrix4();
   let previousMesh: THREE.Mesh | undefined;
+  let showDimensions = true;
   const updateDimensions = () => {
-    dimensions.visible = !!mesh?.visible && !!mesh.parent;
+    dimensions.visible = showDimensions && !!mesh?.visible && !!mesh.parent;
     if (!dimensions.visible) return;
     mesh!.updateWorldMatrix(true, false);
     if (previousMesh === mesh && previousMatrix.equals(mesh!.matrixWorld)) return;
@@ -238,6 +240,7 @@ export const createScene = (container: HTMLElement, onCameraChange?: (azimuth: n
     scene, camera, renderer, grid,
     get mesh() { return mesh; },
     set mesh(value) { mesh = value; previousMesh = undefined; },
+    setDimensionsVisible: visible => { showDimensions = visible; },
     showGrid: () => { grid.visible = true; },
     hideGrid: () => { grid.visible = false; },
     repositionGrid: (x, y, z) => grid.position.set(x, y, z),

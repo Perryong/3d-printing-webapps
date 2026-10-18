@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 
+export type DisplayMode = 'solid' | 'edges' | 'wireframe' | 'xray';
+
 export interface ModelTransform {
   position: { x: number; y: number; z: number };
   rotation: { x: number; y: number; z: number };
@@ -17,6 +19,7 @@ export interface ModelData {
 }
 
 export class ModelManager {
+  private displayMode: DisplayMode = 'edges';
   private models: Map<string, ModelData> = new Map();
   private selectedModelId: string | null = null;
   private raycaster = new THREE.Raycaster();
@@ -110,6 +113,7 @@ export class ModelManager {
       new THREE.LineBasicMaterial({ color: 0x48515e })
     );
     mesh.add(edges);
+    this.applyDisplayMode(mesh);
 
     this.scene.add(mesh);
 
@@ -127,6 +131,21 @@ export class ModelManager {
 
     this.models.set(id, modelData);
     return modelData;
+  }
+
+  setDisplayMode(mode: DisplayMode): void {
+    this.displayMode = mode;
+    this.models.forEach(model => this.applyDisplayMode(model.mesh));
+  }
+
+  private applyDisplayMode(mesh: THREE.Mesh): void {
+    const material = mesh.material as THREE.MeshPhongMaterial;
+    material.wireframe = this.displayMode === 'wireframe';
+    material.transparent = this.displayMode === 'xray';
+    material.opacity = this.displayMode === 'xray' ? 0.3 : 1;
+    material.depthWrite = this.displayMode !== 'xray';
+    material.needsUpdate = true;
+    mesh.children[0].visible = this.displayMode === 'edges';
   }
 
   removeModel(id: string): boolean {
@@ -157,6 +176,7 @@ export class ModelManager {
   }
 
   selectModel(id: string | null): void {
+    if (id === this.selectedModelId) return;
     // Deselect previous model
     if (this.selectedModelId) {
       const prevModel = this.models.get(this.selectedModelId);

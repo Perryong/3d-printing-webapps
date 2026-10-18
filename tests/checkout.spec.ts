@@ -32,7 +32,14 @@ test("viewer checkout, delivery and manual payment persist across reload", async
   await expect(
     page.getByText("Estimated total", { exact: false }),
   ).toBeVisible();
+  const totalBeforeDisplay = await page.getByText("Estimated total", {exact:false}).textContent();
+  await page.getByRole('button', {name:'Close checkout'}).click();
   await page.getByRole("button", { name: "front", exact: true }).click();
+  for (const name of ['Grey solid', 'Wireframe', 'X-ray', 'Solid + edges', 'Dimensions', 'Grid']) {
+    await page.getByRole('button', {name, exact:true}).click();
+  }
+  await page.getByRole('button', {name:'Get print quote / My orders'}).click();
+  await expect(page.getByText('Estimated total', {exact:false})).toHaveText(totalBeforeDisplay!);
   await page
     .locator("input[type=file]")
     .first()

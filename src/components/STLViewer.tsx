@@ -12,6 +12,8 @@ import { STLExporter } from 'three/examples/jsm/exporters/STLExporter.js';
 import { toPreliminaryJob } from '../utils/printEstimator';
 import ViewerControls from './ViewerControls';
 import ViewerDisplay from './ViewerDisplay';
+import ViewerToolbar from './ViewerToolbar';
+import type { DisplayMode } from '../utils/modelManager';
 import CameraDirectionIndicator from './CameraDirectionIndicator.tsx';
 import AboutMe from './about/AboutMe';
 import ContactMe from './contact/ContactMe';
@@ -68,6 +70,23 @@ const STLViewer: React.FC = () => {
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [transformMode, setTransformMode] = useState<'select' | 'move' | 'rotate' | 'scale'>('select');
   
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('edges');
+  const [dimensionsVisible, setDimensionsVisible] = useState(true);
+  const [gridVisible, setGridVisible] = useState(true);
+  const [fullscreen, setFullscreen] = useState(false);
+  const inspectionRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const sync = () => setFullscreen(document.fullscreenElement === inspectionRef.current);
+    document.addEventListener('fullscreenchange', sync);
+    return () => document.removeEventListener('fullscreenchange', sync);
+  }, []);
+  const toggleFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await inspectionRef.current?.requestFullscreen();
+    } catch { toast.error('Fullscreen is unavailable in this browser. Enlarge the browser panel to inspect the model.'); }
+  };
+
   // Camera direction state
   const [cameraAzimuth, setCameraAzimuth] = useState(0);
   const [cameraElevation, setCameraElevation] = useState(0);
@@ -131,9 +150,7 @@ const STLViewer: React.FC = () => {
     setError('');
     
     try {
-      // Store the file in app context for contact form
-      dispatch({ type: 'ADD_UPLOADED_FILE', payload: file });
-      toast.success(`File "${file.name}" loaded into viewer`);
+
 
       // Files remain local until a deliberate checkout submission.
 
@@ -145,10 +162,13 @@ const STLViewer: React.FC = () => {
       }
 
       // Show the grid when file is uploaded
-      sceneRefs.current.showGrid();
+      if (gridVisible) sceneRefs.current.showGrid();
+      else sceneRefs.current.hideGrid();
 
+      // File inspection shows one part at a time; model controls can reveal others.
+      modelManagerRef.current.getAllModels().forEach(model => modelManagerRef.current!.setModelVisibility(model.id, false));
       // Create unique model ID
-      const modelId = `model_${Date.now()}`;
+      const modelId = crypto.randomUUID();
       const modelData = modelManagerRef.current.addModel(modelId, file.name, geometry);
       
       // Update models list
@@ -165,6 +185,8 @@ const STLViewer: React.FC = () => {
       const volumeMm3 = calculateMeshVolume(geometry);
       const volumeCm3 = convertMmToCm(volumeMm3);
       
+      dispatch({ type: 'ADD_UPLOADED_FILE', payload: file });
+      toast.success(`File "${file.name}" loaded into viewer`);
       setFileName(file.name);
       setModelInfo({
         vertices: geometry.attributes.position.count,
@@ -181,13 +203,13 @@ const STLViewer: React.FC = () => {
         const timeEstimate = estimatePrintTime(geometry, printSettings);
         setPrintTimeEstimate(timeEstimate);
       }
-      
+      geometry.dispose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load STL file');
     } finally {
       setIsLoading(false);
     }
-  }, [printSettings, slicingMethod, dispatch]);
+  }, [printSettings, slicingMethod, dispatch, gridVisible]);
 
   // Handle G-code file upload
   const handleGCodeUpload = useCallback(async (file: File) => {
@@ -207,10 +229,7 @@ const STLViewer: React.FC = () => {
       setFileName(file.name);
       setSlicingMethod('gcode');
       
-      // Show grid for G-code files too
-      if (sceneRefs.current) {
-        sceneRefs.current.showGrid();
-      }
+
     } catch (err) {
       setError('Failed to analyze G-code file');
     } finally {
@@ -235,7 +254,15 @@ const STLViewer: React.FC = () => {
   const handleModelSelect = useCallback((modelId: string) => {
     setSelectedModelId(modelId);
     if (modelManagerRef.current) {
+      modelManagerRef.current.getAllModels().forEach(model => modelManagerRef.current!.setModelVisibility(model.id, model.id === modelId));
       modelManagerRef.current.selectModel(modelId);
+      setModels([...modelManagerRef.current.getAllModels()]);
+      const model = modelManagerRef.current.getSelectedModel();
+      if (model) {
+        setSlicingMethod('simplified');
+        setFileName(model.name);
+        sceneRefs.current?.fit(model.mesh);
+      }
     }
   }, []);
 
@@ -451,6 +478,7 @@ const STLViewer: React.FC = () => {
                 Viewer
               </button>
               <button
+                aria-label="About"
                 onClick={() => setViewMode('about')}
                 className={`px-2 lg:px-3 py-2 rounded-md text-xs lg:text-sm font-medium transition-colors flex items-center gap-1 ${
                   viewMode === 'about' 
@@ -462,6 +490,7 @@ const STLViewer: React.FC = () => {
                 <span className="hidden sm:inline">About</span>
               </button>
               <button
+                aria-label="Contact"
                 onClick={() => setViewMode('contact')}
                 className={`px-2 lg:px-3 py-2 rounded-md text-xs lg:text-sm font-medium transition-colors flex items-center gap-1 ${
                   viewMode === 'contact' 
@@ -507,14 +536,6 @@ const STLViewer: React.FC = () => {
               </button>
             )}
             
-            {fileName && slicingMethod !== 'gcode' && viewMode === 'viewer' && (
-              <ViewerControls
-                onZoomIn={zoomIn}
-                onZoomOut={zoomOut}
-                onResetCamera={resetCamera}
-                onViewChange={setCameraView}
-              />
-            )}
           </div>
         </div>
         
@@ -586,7 +607,7 @@ const STLViewer: React.FC = () => {
 
         <div className="flex-1 flex flex-col relative min-w-0">
           {/* Viewer Section - Always mounted but hidden when not active */}
-          <div className={`${viewMode === 'viewer' ? 'flex flex-col flex-1' : 'hidden'}`}>
+          <div className={`${viewMode === 'viewer' ? 'flex flex-col flex-1 min-h-0' : 'hidden'}`}>
             <details className="shrink-0 bg-gray-800 text-gray-300">
               <summary className="cursor-pointer px-4 py-2 text-xs">Print estimate & pricing</summary>
             <PrintTimeDisplay
@@ -598,7 +619,17 @@ const STLViewer: React.FC = () => {
               isCameraRotating={isCameraRotating}
             />
             </details>
-            <QuotePanel job={printTimeEstimate && slicingMethod === 'simplified' ? toPreliminaryJob(printTimeEstimate, 1) : null} modelFile={checkoutFile} modelRevision={modelRevision} />
+            <QuotePanel job={printTimeEstimate && slicingMethod === 'simplified' ? toPreliminaryJob(printTimeEstimate, 1) : null} modelFile={checkoutFile} modelRevision={modelRevision} inspecting={fullscreen} />
+            <div ref={inspectionRef} className="relative flex min-h-0 flex-1 flex-col bg-slate-100" data-testid="inspection-viewer">
+            <ViewerToolbar mode={displayMode} onModeChange={mode => { setDisplayMode(mode); modelManagerRef.current?.setDisplayMode(mode); }}
+              dimensions={dimensionsVisible} grid={gridVisible}
+              onDimensionsChange={() => { setDimensionsVisible(!dimensionsVisible); sceneRefs.current?.setDimensionsVisible(!dimensionsVisible); }}
+              onGridChange={() => { setGridVisible(!gridVisible); if (gridVisible) sceneRefs.current?.hideGrid(); else sceneRefs.current?.showGrid(); }}
+              fullscreen={fullscreen} onFullscreen={toggleFullscreen} />
+            <div className="relative flex min-h-0 flex-1 flex-col">
+            {fileName && slicingMethod !== 'gcode' && <div className="absolute left-2 top-2 z-10 max-w-[calc(100%-1rem)] rounded-lg bg-white/90 p-1 shadow-sm">
+              <ViewerControls onZoomIn={zoomIn} onZoomOut={zoomOut} onResetCamera={resetCamera} onViewChange={setCameraView} />
+            </div>}
             <ViewerDisplay
               slicingMethod={slicingMethod}
               fileName={fileName}
@@ -606,6 +637,16 @@ const STLViewer: React.FC = () => {
               error={error}
               onMountReady={initializeScene}
             />
+            </div>
+            {models.length > 0 && <div className="flex shrink-0 items-center gap-2 border-t border-slate-200 bg-white p-2 text-slate-700">
+              <button className="min-h-10 rounded border px-3 disabled:opacity-30" aria-label="Previous file" disabled={models.findIndex(m => m.id === selectedModelId) <= 0} onClick={() => handleModelSelect(models[models.findIndex(m => m.id === selectedModelId) - 1].id)}>‹</button>
+              <select aria-label="Selected file" className="min-h-10 min-w-0 flex-1 rounded border bg-white p-2 text-sm" value={selectedModelId ?? ''} onChange={event => handleModelSelect(event.target.value)}>
+                <option value="" disabled>Select a model</option>
+                {models.map(model => <option value={model.id} key={model.id}>{model.name}</option>)}
+              </select>
+              <button className="min-h-10 rounded border px-3 disabled:opacity-30" aria-label="Next file" disabled={models.findIndex(m => m.id === selectedModelId) >= models.length - 1} onClick={() => handleModelSelect(models[models.findIndex(m => m.id === selectedModelId) + 1].id)}>›</button>
+            </div>}
+            </div>
           </div>
 
           {/* About Section */}

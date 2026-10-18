@@ -18,10 +18,12 @@ export default function QuotePanel({
   job,
   modelFile,
   modelRevision,
+  inspecting = false,
 }: {
   job: JobTotals | null;
   modelFile: File | null;
   modelRevision: string;
+  inspecting?: boolean;
 }) {
   const [open, setOpen] = useState(false),
     [quantity, setQuantity] = useState(1),
@@ -30,6 +32,7 @@ export default function QuotePanel({
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [orderIds, setOrderIds] = useState<string[]>([]);
+  useEffect(() => { if (inspecting) setOpen(false); }, [inspecting]);
   const generation = useRef(0),
     attempt = useRef<{ key: string; id: string }>();
   const jobKey = JSON.stringify(job);

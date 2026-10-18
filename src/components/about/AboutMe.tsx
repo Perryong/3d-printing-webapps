@@ -4,8 +4,8 @@ import { User, Code, Briefcase, GraduationCap } from 'lucide-react';
 
 const aboutData = {
   name: "Perry",
-  title: "Software Engineer",
-  bio: "Currently working as a Software / Rationalization Engineer at Murata Electronics Singapore. I'm also pursuing a part‑time M.Sc. AI at NTU. My journey blends academic rigour with real‑world AI applications.",
+  title: "Senior AI Engineer",
+  bio: "Senior AI Engineer at Murata Electronics Singapore, developing intelligent applications and automation for smart manufacturing. I completed my Master of Science in Artificial Intelligence at NTU in 2025. My journey blends academic rigour with real‑world AI applications.",
   skills: [
     "Software Engineering",
     "AI/Machine Learning",
@@ -19,16 +19,16 @@ const aboutData = {
   experience: [
     {
       company: "Murata Electronics Singapore",
-      role: "Software / Rationalization Engineer",
-      duration: "Present",
-      description: "Working on software development and process optimization, applying engineering principles to streamline operations and improve efficiency."
+      role: "Senior AI Engineer",
+      duration: "Apr 2026 – Present",
+      description: "Develop full-stack AI applications and cloud-native solutions for smart manufacturing, using Python, FastAPI, React and AWS. Build agentic AI workflows, orchestration and RAG systems, and develop computer vision models for defect detection. Research multimodal AI and optimize models for scalable deployment and efficient edge inference."
     }
   ],
   education: [
     {
       institution: "Nanyang Technological University (NTU)",
-      degree: "Master of Science in Artificial Intelligence (Part-time)",
-      year: "In Progress"
+      degree: "Master of Science in Artificial Intelligence",
+      year: "Completed 2025"
     }
   ]
 };

@@ -48,3 +48,26 @@ test('invalid scales cannot collapse or corrupt a part', () => {
   assert.equal(part.mesh.scale.x, 1);
   m.dispose();
 });
+
+test('display modes preserve geometry, bounds, transforms and do not report model changes', () => {
+  let changes = 0;
+  const m = new ModelManager(new THREE.Scene(), new THREE.PerspectiveCamera(), {domElement:canvas} as unknown as THREE.WebGLRenderer, () => changes++);
+  const part = m.addModel('a', 'a.stl', new THREE.BoxGeometry(20,30,40));
+  const positions = Array.from(part.mesh.geometry.attributes.position.array);
+  const bounds = new THREE.Box3().setFromObject(part.mesh).clone();
+  const transform = JSON.stringify(part.transform);
+  for (const mode of ['solid', 'edges', 'wireframe', 'xray'] as const) {
+    m.setDisplayMode(mode);
+    const material = part.mesh.material as THREE.MeshPhongMaterial;
+    assert.equal(material.wireframe, mode === 'wireframe');
+    assert.equal(material.transparent, mode === 'xray');
+    assert.equal(part.mesh.children[0].visible, mode === 'edges');
+    assert.deepEqual(Array.from(part.mesh.geometry.attributes.position.array), positions);
+    assert.ok(new THREE.Box3().setFromObject(part.mesh).equals(bounds));
+    assert.equal(JSON.stringify(part.transform), transform);
+  }
+  assert.equal(changes, 0);
+  const next = m.addModel('b', 'b.stl', new THREE.BoxGeometry());
+  assert.equal((next.mesh.material as THREE.MeshPhongMaterial).opacity, 0.3);
+  m.dispose();
+});
