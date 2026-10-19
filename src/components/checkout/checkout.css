@@ -5,7 +5,8 @@
 .checkout-toggle {
   display: block;
   margin: 4px 8px 4px auto;
-  z-index: 25;
+  position: relative;
+  z-index: 26;
   background: #163e64 !important;
   color: white !important;
   box-shadow: 0 2px 12px #0002;
@@ -46,6 +47,7 @@
 }
 .checkout input,
 .checkout select,
+.checkout textarea,
 .owner-page input,
 .owner-page select {
   display: block;

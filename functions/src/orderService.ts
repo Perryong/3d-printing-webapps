@@ -52,6 +52,7 @@ export const requestQuote = callable(requestSchema, async (d, r) => {
       customerUid: r.auth!.uid,
       modelPath: d.modelPath,
       modelRevision: d.modelRevision,
+      ...(d.customization ? {customization:d.customization}:{}),
       quantity: d.job.quantity,
       material: "PLA",
       fulfilment: d.fulfilment,
@@ -74,6 +75,7 @@ export const requestQuote = callable(requestSchema, async (d, r) => {
       job,
       settings,
       estimate: q,
+      ...(d.customization ? {customization:d.customization}:{}),
       audit: [{ action: "requested", uid: r.auth!.uid, at: now }],
     });
     return { orderId };

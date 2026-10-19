@@ -4,7 +4,7 @@ import {
   assertFails,
   assertSucceeds,
 } from "@firebase/rules-unit-testing";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, deleteDoc } from "firebase/firestore";
 import { ref, uploadBytes } from "firebase/storage";
 import { readFileSync } from "node:fs";
 test("customer isolation and owner claim; direct writes forbidden", async () => {
@@ -58,6 +58,7 @@ test("customer isolation and owner claim; direct writes forbidden", async () => 
       ),
     );
   } finally {
+    await e.withSecurityRulesDisabled(async c=>{await deleteDoc(doc(c.firestore(),"orders/a"));await deleteDoc(doc(c.firestore(),"privateOrders/a"));});
     await e.cleanup();
   }
 });

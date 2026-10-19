@@ -1,4 +1,5 @@
 import { z } from "zod";
+import {customizationSchema,type Customization} from "./customization";
 import {
   jobSchema,
   type JobTotals,
@@ -32,6 +33,7 @@ export function setupReady(b: BusinessConfig) {
 }
 export const requestSchema = z
   .object({
+    customization: customizationSchema.optional(),
     requestId: z.string().uuid(),
     modelPath: text,
     modelRevision: text,
@@ -56,6 +58,7 @@ export const requestSchema = z
   );
 export type QuoteRequest = z.infer<typeof requestSchema>;
 export type Order = {
+  customization?: Customization;
   id: string;
   customerUid: string;
   modelPath: string;
@@ -104,6 +107,7 @@ export type ActualCostInputs = {
   courierCostCents: number;
 };
 export type PrivateOrder = {
+  customization?: Customization;
   actualInputs?: ActualCostInputs;
   buildBoundsMm?: { x: number; y: number; z: number };
   job: JobTotals;

@@ -359,3 +359,11 @@ your inbox. Never share the password. Confirm the sliced quote first; customers
 then accept it, scan the bank-issued QR, enter the exact total and use the order
 reference. Their payment claim remains pending until you match the amount and
 reference against your bank transactions and approve it in the dashboard.
+
+### STL dimension customization
+
+Open **Customize STL dimensions** after uploading an STL. Enter overall X/Y/Z dimensions in millimetres, apply the change, and use **Download edited STL** to save the same binary snapshot sent with a quote request. Proportions are locked by default; independent scaling changes holes, walls and clearances too. Relocking preserves the customized proportions. Dimensions follow the original model axes; placed build dimensions are shown separately. An oversize model can be downloaded, but must fit the A1's 256 × 256 × 256 mm volume before quoting.
+
+Submitted orders retain their original STL snapshot. Customers and the owner can open **Model dimensions** to review the source filename and original/edited sizes. G-code remains read-only analysis; upload the original STL for customization and quoting. Owner slicing and manual PayNow verification are unchanged.
+
+Photo references were removed from this release at the owner's request. Existing stored data is not deleted. Deploy the compatible checkout Functions before the frontend using `npm run deploy:checkout`; do not alter the shared project's legacy bucket rules. Automated checkout tests use the `demo-print-checkout` emulators, never real orders.

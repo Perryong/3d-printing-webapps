@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Order } from "../../../shared/orders";
 import { callCheckout, watchOrder, sgd } from "../../services/checkoutService";
+import OrderModelDetails from "../customization/OrderModelDetails";
 import PaymentReceipt from "./PaymentReceipt";
 import PaymentInstructions from "./PaymentInstructions";
 export default function OrderStatus({ orderId }: { orderId: string }) {
@@ -40,6 +41,7 @@ export default function OrderStatus({ orderId }: { orderId: string }) {
   return (
     <article className="space-y-3 border-t pt-4">
       <h3 className="font-semibold break-all">Order {order.id}</h3>
+      <OrderModelDetails order={order}/>
       <p>
         {order.quantity} × PLA ·{" "}
         {order.fulfilment === "delivery"

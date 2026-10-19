@@ -14,16 +14,21 @@ import {
 import CheckoutForm, { type CheckoutDetails } from "./CheckoutForm";
 import OrderStatus from "./OrderStatus";
 import "./checkout.css";
+import type { Customization } from "../../../shared/customization";
 export default function QuotePanel({
   job,
   modelFile,
   modelRevision,
   inspecting = false,
+  blockedReason = "",
+  customization,
 }: {
   job: JobTotals | null;
   modelFile: File | null;
   modelRevision: string;
   inspecting?: boolean;
+  blockedReason?: string;
+  customization?: Customization;
 }) {
   const [open, setOpen] = useState(false),
     [quantity, setQuantity] = useState(1),
@@ -32,16 +37,26 @@ export default function QuotePanel({
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [orderIds, setOrderIds] = useState<string[]>([]);
-  useEffect(() => { if (inspecting) setOpen(false); }, [inspecting]);
-  const generation = useRef(0),
-    attempt = useRef<{ key: string; id: string }>();
+  useEffect(() => {
+    if (inspecting) setOpen(false);
+  }, [inspecting]);
+  const attempt = useRef<{ key: string; id: string }>();
   const jobKey = JSON.stringify(job);
+  const draftKey = JSON.stringify([
+    jobKey,
+    modelRevision,
+    quantity,
+    fulfilment,
+    customization,
+    blockedReason,
+  ]);
+  const currentDraft = useRef(draftKey);
+  currentDraft.current = draftKey;
   useEffect(() => {
     setQuote(undefined);
     setError("");
-    generation.current++;
     attempt.current = undefined;
-  }, [jobKey, modelRevision, quantity, fulfilment]);
+  }, [draftKey]);
   useEffect(() => {
     if (!open || checkoutMode === "disabled") return;
     let stop = () => {},
@@ -63,8 +78,8 @@ export default function QuotePanel({
     };
   }, [open]);
   async function preview() {
-    if (!job) return;
-    const revision = generation.current;
+    if (!job || blockedReason) return;
+    const revision = draftKey;
     setBusy(true);
     setError("");
     try {
@@ -72,7 +87,7 @@ export default function QuotePanel({
         job: { ...job, quantity },
         fulfilment,
       });
-      if (revision === generation.current) setQuote(q);
+      if (revision === currentDraft.current) setQuote(q);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -80,11 +95,14 @@ export default function QuotePanel({
     }
   }
   async function submit(details: CheckoutDetails) {
-    if (!job || !modelFile) return;
+    if (!job || !modelFile || blockedReason)
+      return;
+    const submittingDraft = draftKey;
     const payload = {
         job: { ...job, quantity },
         fulfilment,
         modelRevision,
+        ...(customization ? { customization } : {}),
         ...details,
       },
       key = JSON.stringify(payload);
@@ -95,9 +113,19 @@ export default function QuotePanel({
     setError("");
     try {
       const modelPath = await uploadModel(modelFile, requestId);
-      await callCheckout("requestQuote", { ...payload, requestId, modelPath });
-      attempt.current = undefined;
-      setQuote(undefined);
+      if (submittingDraft !== currentDraft.current)
+        throw new Error(
+          "Your draft changed during upload. Review it and submit again.",
+        );
+      await callCheckout("requestQuote", {
+        ...payload,
+        requestId,
+        modelPath,
+      });
+      if (submittingDraft === currentDraft.current) {
+        attempt.current = undefined;
+        setQuote(undefined);
+      }
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -151,7 +179,17 @@ export default function QuotePanel({
                     <option value="delivery">Delivery +S$5 per order</option>
                   </select>
                 </label>
-                {job && modelFile ? (
+                {customization && (
+                  <p className="text-sm break-all">
+                    Quoting {customization.sourceName}:{" "}
+                    {Object.values(customization.editedBoundsMm)
+                      .map((n) => n.toFixed(2))
+                      .join(" × ")}{" "}
+                    mm. The edited STL will be uploaded.
+                  </p>
+                )}
+                {blockedReason && <p role="status">{blockedReason}</p>}
+                {job && modelFile && !blockedReason ? (
                   <>
                     <p className="text-sm">
                       Preliminary: {(job.hours * quantity).toFixed(2)} hours ·{" "}
@@ -159,7 +197,10 @@ export default function QuotePanel({
                       full batch time, supports and purge in Bambu Studio.
                     </p>
                     <button
-                      disabled={!Number.isInteger(quantity) || quantity < 1}
+                      disabled={
+                        !Number.isInteger(quantity) ||
+                        quantity < 1
+                      }
                       onClick={preview}
                     >
                       Estimate price
@@ -168,7 +209,7 @@ export default function QuotePanel({
                 ) : (
                   <p>Load and select an STL to request a quote.</p>
                 )}
-                {quote && (
+                {quote && !blockedReason && (
                   <>
                     <p className="text-xl font-semibold">
                       Estimated total {sgd(quote.totalCents)}
