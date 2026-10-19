@@ -13,11 +13,7 @@ const model = (x = 20, y = 10, z = 5) =>
       binary: true,
     }).buffer,
   );
-const png = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAACAAAAAYCAIAAAAUMWhjAAAACXBIWXMAAAPoAAAD6AG1e1JrAAAAMUlEQVRIiWM4ffUhTRHDqAVXR4Po4WgqOj2a0R6OFhWnR0vTq6MVzunRKvPq4G5VAABrf4NqKoXoGwAAAABJRU5ErkJggg==",
-  "base64",
-);
-test("dimension drafts, proportional/unlocked edit, download and quote references", async ({
+test("dimension drafts, proportional/unlocked edit, download and quote dimensions", async ({
   page,
 }) => {
   await page.goto("/");
@@ -86,21 +82,9 @@ test("dimension drafts, proportional/unlocked edit, download and quote reference
   await page
     .getByRole("button", { name: "Get print quote / My orders" })
     .click();
-  await page
-    .getByLabel("Add reference photos")
-    .setInputFiles({
-      name: "reference.png",
-      mimeType: "image/png",
-      buffer: png,
-    });
-  await expect(
-    page.getByRole("button", { name: "Remove reference.png" }),
-  ).toBeVisible();
-  await page.getByLabel("Reference notes").fill("Demo reference: check fit");
-  await page
-    .getByLabel("Known measurement label (optional)")
-    .fill("slot width");
-  await page.getByLabel("Known measurement (mm)", { exact: true }).fill("12");
+  await expect(page.getByLabel('Add reference photos')).toHaveCount(0);
+  await expect(page.getByLabel('Reference notes')).toHaveCount(0);
+  await expect(page.getByLabel('Known measurement (mm)',{exact:true})).toHaveCount(0);
   await page
     .getByRole("button", { name: "Estimate price", exact: true })
     .click();
@@ -117,34 +101,24 @@ test("dimension drafts, proportional/unlocked edit, download and quote reference
   const order = page
     .locator("article")
     .filter({ hasText: "Awaiting owner slicing" });
-  await order.getByText("Model & photo references", { exact: true }).click();
+  await order.getByText("Model dimensions", { exact: true }).click();
   await expect(order.getByText("Source: resize.stl")).toBeVisible();
-  await expect(order.getByText("Demo reference: check fit")).toBeVisible();
-  await expect(order.getByRole("img", { name: "reference.png" })).toBeVisible();
   const admin=getApps().find((a:any)=>a.name==='customization-e2e')??initializeApp({projectId:'demo-print-checkout'},'customization-e2e');
   const [uploaded]=await getStorage(admin).bucket('demo-print-checkout.firebasestorage.app').file(submitted.modelPath).download();
   expect(Buffer.compare(uploaded,expectedBytes)).toBe(0);
+  expect(submitted).not.toHaveProperty("references");
+  expect(submitted).not.toHaveProperty("referenceNotes");
 
 });
-test("oversize export permitted, G-code and photo-only cannot quote", async ({
+test("oversize export permitted, G-code and empty input cannot quote", async ({
   page,
 }) => {
   await page.goto("/");
   await page
     .getByRole("button", { name: "Get print quote / My orders" })
     .click();
-  await page
-    .getByLabel("Add reference photos")
-    .setInputFiles({
-      name: "reference.png",
-      mimeType: "image/png",
-      buffer: png,
-    });
-  await expect(
-    page.getByText(
-      "Reference photo only — upload an STL to request a print quote.",
-    ),
-  ).toBeVisible();
+  await expect(page.getByRole('button',{name:'Estimate price',exact:true})).toHaveCount(0);
+  await expect(page.getByLabel('Add reference photos')).toHaveCount(0);
   await page.getByRole("button", { name: "Close checkout" }).click();
   await page
     .locator("input[type=file]")
@@ -180,7 +154,7 @@ test("oversize export permitted, G-code and photo-only cannot quote", async ({
   ).toHaveCount(0);
 });
 
-test('late estimates and photo uploads cannot submit a changed model',async({page})=>{
+test('late estimates and model uploads cannot submit a changed model',async({page})=>{
  await page.goto('/');
  const load=(x:number)=>page.locator('input[type=file]').first().setInputFiles({name:`part-${x}.stl`,mimeType:'application/octet-stream',buffer:model(x)});
  await load(20);
@@ -194,16 +168,35 @@ test('late estimates and photo uploads cannot submit a changed model',async({pag
  await expect(page.getByRole('button',{name:'Estimate price',exact:true})).toBeEnabled();
  await expect(page.getByText('Estimated total',{exact:false})).toHaveCount(0);
  await page.unroute('**/previewQuote');
- await page.getByLabel('Add reference photos').setInputFiles({name:'demo.png',mimeType:'image/png',buffer:png});
- await expect(page.getByRole('button',{name:'Remove demo.png'})).toBeVisible();
  await page.getByRole('button',{name:'Estimate price',exact:true}).click();
  await page.getByLabel('Name',{exact:true}).fill('Race demo');await page.getByLabel('Email',{exact:true}).fill('race@example.test');await page.getByLabel('Phone',{exact:true}).fill('81234567');
  let uploadStarted=()=>{},releaseUpload=()=>{},requests=0;
  const uploadWaiting=new Promise<void>(r=>{uploadStarted=r;}),uploadHold=new Promise<void>(r=>{releaseUpload=r;});
  page.on('request',r=>{if(r.url().endsWith('/requestQuote') && r.method()==='POST')requests++;});
- await page.route('**/uploadReference',async route=>{if(route.request().method()==='OPTIONS'){await route.continue();return;}uploadStarted();await uploadHold;await route.continue();});
+ await page.route('**/v0/b/**',async route=>{if(route.request().method()!=='POST'){await route.continue();return;}uploadStarted();await uploadHold;await route.continue();});
  await page.getByRole('button',{name:'Request confirmed quote'}).click();await uploadWaiting;
- await load(40);releaseUpload();
+ await load(40);
+ await expect(page.getByText('Quoting part-40.stl:',{exact:false})).toBeVisible();
+ releaseUpload();
  await expect(page.getByText('Your draft changed during upload. Review it and submit again.')).toBeVisible();
  expect(requests).toBe(0);
+});
+
+test('phone dimension actions remain exposed with room for the model', async ({page}) => {
+  for (const width of [390, 320]) {
+    await page.setViewportSize({width,height:844});
+    await page.goto('/');
+    await page.locator('input[type=file]').first().setInputFiles({name:'phone.stl',mimeType:'application/octet-stream',buffer:model()});
+    await page.getByText('Customize STL dimensions',{exact:true}).click();
+    for (const name of ['Apply dimensions','Reset original dimensions','Download edited STL']) {
+      const button=page.getByRole('button',{name,exact:true});
+      // Visibility must include clipping and overlays, not merely DOM visibility.
+      expect(await button.evaluate(e=>{
+        const r=e.getBoundingClientRect();const hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
+        return hit===e || e.contains(hit);
+      }),name).toBe(true);
+    }
+    expect((await page.getByTestId('inspection-viewer').boundingBox())!.height).toBeGreaterThanOrEqual(340);
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBe(width);
+  }
 });

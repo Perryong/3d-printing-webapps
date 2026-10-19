@@ -27,6 +27,8 @@ const { getAuth: adminAuth } = require("firebase-admin/auth");
 const { getFirestore: adminDb } = require("firebase-admin/firestore");
 const admin = adminInit({ projectId: "demo-print-checkout" }, "tests");
 const db = adminDb(admin);
+const bankReference = `BANK-${randomUUID()}`;
+const secondBankReference = `BANK-${randomUUID()}`;
 async function client(name: string, owner = false) {
   const app = initializeApp(
     {
@@ -182,7 +184,7 @@ test("authoritative quotes, owner verification, retries, isolation and refunds",
       ...action,
       requestId: randomUUID(),
       decision: "approve",
-      bankReference: "BANK-001",
+      bankReference,
     };
     await Promise.all([
       o.call("verifyPayment", approve),
@@ -235,14 +237,14 @@ test("authoritative quotes, owner verification, retries, isolation and refunds",
         ...secondAction,
         requestId: randomUUID(),
         decision: "approve",
-        bankReference: "BANK-001",
+        bankReference,
       }),
     );
     await o.call("verifyPayment", {
       ...secondAction,
       requestId: randomUUID(),
       decision: "approve",
-      bankReference: "BANK-002",
+      bankReference: secondBankReference,
     });
     // Settings are private and historical accepted quotes are immutable.
     await assert.rejects(

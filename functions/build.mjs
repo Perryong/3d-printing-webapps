@@ -6,5 +6,5 @@ await build({
   target: "node22",
   format: "cjs",
   outfile: "lib/index.cjs",
-  external: ["sharp", "firebase-admin/*", "firebase-functions/*"],
+  external: ["firebase-admin/*", "firebase-functions/*"],
 });

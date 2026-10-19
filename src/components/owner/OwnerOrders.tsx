@@ -1,4 +1,4 @@
-import OrderReferences from "../customization/OrderReferences";
+import OrderModelDetails from "../customization/OrderModelDetails";
 import { useEffect, useRef, useState } from "react";
 import { checkoutAuth } from "../../lib/firebase";
 import {
@@ -118,7 +118,7 @@ function OrderCard({ order: o }: { order: Order }) {
       >
         Download customer STL
       </button>
-      <OrderReferences order={o}/>
+      <OrderModelDetails order={o}/>
       {privateOrder && (
         <p className="my-3">
           Estimated production & handling cost:{" "}

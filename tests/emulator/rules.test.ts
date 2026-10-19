@@ -5,7 +5,7 @@ import {
   assertSucceeds,
 } from "@firebase/rules-unit-testing";
 import { doc, getDoc, setDoc, deleteDoc } from "firebase/firestore";
-import { ref, uploadBytes, getMetadata } from "firebase/storage";
+import { ref, uploadBytes } from "firebase/storage";
 import { readFileSync } from "node:fs";
 test("customer isolation and owner claim; direct writes forbidden", async () => {
   const e = await initializeTestEnvironment({
@@ -29,11 +29,6 @@ test("customer isolation and owner claim; direct writes forbidden", async () => 
     const a = e.authenticatedContext("alice"),
       b = e.authenticatedContext("bob"),
       o = e.authenticatedContext("owner", { owner: true });
-    await e.withSecurityRulesDisabled(async(c)=>{await uploadBytes(ref(c.storage(),"references/alice/request/photo.png"),new Uint8Array(10),{contentType:"image/png"});});
-    await assertSucceeds(getMetadata(ref(a.storage(),"references/alice/request/photo.png")));
-    await assertSucceeds(getMetadata(ref(o.storage(),"references/alice/request/photo.png")));
-    await assertFails(getMetadata(ref(b.storage(),"references/alice/request/photo.png")));
-    await assertFails(uploadBytes(ref(a.storage(),"references/alice/request/new.png"),new Uint8Array(10),{contentType:"image/png"}));
     await assertSucceeds(getDoc(doc(a.firestore(), "orders/a")));
     await assertFails(getDoc(doc(b.firestore(), "orders/a")));
     await assertFails(getDoc(doc(a.firestore(), "privateOrders/a")));

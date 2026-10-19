@@ -1,4 +1,3 @@
-import {validateReferences} from "./referenceService";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { type Transaction } from "firebase-admin/firestore";
@@ -39,7 +38,6 @@ export async function readOrder(
 }
 export const requestQuote = callable(requestSchema, async (d, r) => {
   await validateModel(d.modelPath, r.auth!.uid);
-  await validateReferences(r.auth!.uid,d.requestId,d.references??[]);
   return mutate(r.auth!.uid, "requestQuote", d, async (tx) => {
     const c = await tx.get(db.doc("config/business"));
     guard(c.exists, "Owner setup is not ready");
@@ -54,9 +52,6 @@ export const requestQuote = callable(requestSchema, async (d, r) => {
       customerUid: r.auth!.uid,
       modelPath: d.modelPath,
       modelRevision: d.modelRevision,
-      ...(d.references ? {references:d.references}:{}),
-      ...(d.referenceNotes ? {referenceNotes:d.referenceNotes}:{}),
-      ...(d.referenceMeasurement ? {referenceMeasurement:d.referenceMeasurement}:{}),
       ...(d.customization ? {customization:d.customization}:{}),
       quantity: d.job.quantity,
       material: "PLA",
@@ -85,7 +80,7 @@ export const requestQuote = callable(requestSchema, async (d, r) => {
     });
     return { orderId };
   });
-},false,{memory:"512MiB",concurrency:1});
+});
 export const confirmQuote = callable(
   z
     .object({ ...mutationFields, job: jobSchema, buildBoundsMm: boundsSchema })

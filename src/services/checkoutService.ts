@@ -86,13 +86,3 @@ export const sgd = (cents: number) =>
   new Intl.NumberFormat("en-SG", { style: "currency", currency: "SGD" }).format(
     cents / 100,
   );
-
-// Server-side image validation and token-free Storage writes; retries reuse immutable paths.
-export async function uploadReferences(photos: import('../components/customization/referenceDraft').DraftPhoto[], requestId:string) {
- const result:import('../../shared/references').ReferenceAsset[]=[];
- for(const photo of photos) {
-  const base64=await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]);reader.onerror=()=>reject(new Error('Could not read photo'));reader.readAsDataURL(photo.file);});
-  result.push(await callCheckout('uploadReference',{requestId,assetId:photo.id,originalName:photo.file.name,base64}));
- }
- return result;
-}

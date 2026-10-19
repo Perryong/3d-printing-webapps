@@ -8,23 +8,13 @@ import { checkoutMode, ensureCustomerSession } from "../../lib/firebase";
 import {
   callCheckout,
   uploadModel,
-  uploadReferences,
   watchOrders,
   sgd,
 } from "../../services/checkoutService";
 import CheckoutForm, { type CheckoutDetails } from "./CheckoutForm";
 import OrderStatus from "./OrderStatus";
 import "./checkout.css";
-import ReferencePhotos from "../customization/ReferencePhotos";
-import {
-  emptyReferences,
-  referenceContext,
-  type ReferenceDraft,
-} from "../customization/referenceDraft";
-import {
-  referenceContextSchema,
-  type Customization,
-} from "../../../shared/references";
+import type { Customization } from "../../../shared/customization";
 export default function QuotePanel({
   job,
   modelFile,
@@ -40,15 +30,6 @@ export default function QuotePanel({
   blockedReason?: string;
   customization?: Customization;
 }) {
-  const [photoPending, setPhotoPending] = useState(false);
-  const [references, setReferences] = useState<ReferenceDraft>(emptyReferences);
-  const context = referenceContext(references);
-  const contextValid = referenceContextSchema.safeParse(context).success;
-  const contextKey = JSON.stringify([
-    context,
-    customization,
-    references.photos.map((p) => p.id),
-  ]);
   const [open, setOpen] = useState(false),
     [quantity, setQuantity] = useState(1),
     [fulfilment, setFulfilment] = useState<Fulfilment>("collection"),
@@ -59,24 +40,21 @@ export default function QuotePanel({
   useEffect(() => {
     if (inspecting) setOpen(false);
   }, [inspecting]);
-  const generation = useRef(0),
-    attempt = useRef<{ key: string; id: string }>();
+  const attempt = useRef<{ key: string; id: string }>();
   const jobKey = JSON.stringify(job);
   const draftKey = JSON.stringify([
     jobKey,
     modelRevision,
     quantity,
     fulfilment,
-    contextKey,
+    customization,
     blockedReason,
-    photoPending,
   ]);
   const currentDraft = useRef(draftKey);
   currentDraft.current = draftKey;
   useEffect(() => {
     setQuote(undefined);
     setError("");
-    generation.current++;
     attempt.current = undefined;
   }, [draftKey]);
   useEffect(() => {
@@ -100,7 +78,7 @@ export default function QuotePanel({
     };
   }, [open]);
   async function preview() {
-    if (!job || blockedReason || !contextValid || photoPending) return;
+    if (!job || blockedReason) return;
     const revision = draftKey;
     setBusy(true);
     setError("");
@@ -117,18 +95,17 @@ export default function QuotePanel({
     }
   }
   async function submit(details: CheckoutDetails) {
-    if (!job || !modelFile || blockedReason || !contextValid || photoPending)
+    if (!job || !modelFile || blockedReason)
       return;
     const submittingDraft = draftKey;
     const payload = {
         job: { ...job, quantity },
         fulfilment,
         modelRevision,
-        ...context,
         ...(customization ? { customization } : {}),
         ...details,
       },
-      key = JSON.stringify([payload, references.photos.map((p) => p.id)]);
+      key = JSON.stringify(payload);
     if (attempt.current?.key !== key)
       attempt.current = { key, id: crypto.randomUUID() };
     const requestId = attempt.current.id;
@@ -136,7 +113,6 @@ export default function QuotePanel({
     setError("");
     try {
       const modelPath = await uploadModel(modelFile, requestId);
-      const assets = await uploadReferences(references.photos, requestId);
       if (submittingDraft !== currentDraft.current)
         throw new Error(
           "Your draft changed during upload. Review it and submit again.",
@@ -145,7 +121,6 @@ export default function QuotePanel({
         ...payload,
         requestId,
         modelPath,
-        references: assets,
       });
       if (submittingDraft === currentDraft.current) {
         attempt.current = undefined;
@@ -204,24 +179,6 @@ export default function QuotePanel({
                     <option value="delivery">Delivery +S$5 per order</option>
                   </select>
                 </label>
-                <ReferencePhotos
-                  draft={references}
-                  onChange={setReferences}
-                  disabled={busy}
-                  onPending={setPhotoPending}
-                />
-                {!contextValid && (
-                  <p role="alert">
-                    Enter a measurement label and a positive value, or leave
-                    both blank.
-                  </p>
-                )}
-                {!modelFile && references.photos.length > 0 && (
-                  <p>
-                    Reference photo only — upload an STL to request a print
-                    quote.
-                  </p>
-                )}
                 {customization && (
                   <p className="text-sm break-all">
                     Quoting {customization.sourceName}:{" "}
@@ -242,9 +199,7 @@ export default function QuotePanel({
                     <button
                       disabled={
                         !Number.isInteger(quantity) ||
-                        quantity < 1 ||
-                        !contextValid ||
-                        photoPending
+                        quantity < 1
                       }
                       onClick={preview}
                     >
@@ -254,7 +209,7 @@ export default function QuotePanel({
                 ) : (
                   <p>Load and select an STL to request a quote.</p>
                 )}
-                {quote && !blockedReason && contextValid && !photoPending && (
+                {quote && !blockedReason && (
                   <>
                     <p className="text-xl font-semibold">
                       Estimated total {sgd(quote.totalCents)}

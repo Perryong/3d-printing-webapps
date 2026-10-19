@@ -12,5 +12,3 @@ export {
   getPrivateOrder,
   recordActualCosts,
 } from "./ownerService";
-
-export {uploadReference,readReference} from "./referenceService";

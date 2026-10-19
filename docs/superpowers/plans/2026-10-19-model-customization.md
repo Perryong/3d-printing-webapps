@@ -1,5 +1,8 @@
 # Model Customization Implementation Plan
 
+> Scope update: photo references, photo notes/measurements, image upload/read Functions and their dependency have been removed at the user's request. The historical plan below describes the earlier scope; the active release is STL dimension editing, binary export and quote integration only. Existing order/storage records are not deleted.
+
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add photo references, editable overall STL dimensions and regenerated STL export tied to the existing quote flow, with an explicit boundary for G-code and photo-only inputs.

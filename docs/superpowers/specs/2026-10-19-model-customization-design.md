@@ -1,5 +1,8 @@
 # Model customization and photo-assisted design
 
+> Scope update: photo references, photo notes/measurements, image upload/read Functions and their dependency have been removed at the user's request. The historical plan below describes the earlier scope; the active release is STL dimension editing, binary export and quote integration only. Existing order/storage records are not deleted.
+
+
 Status: Release 1 implemented locally on codex/model-customization; independent review completed and its relocking-proportions finding fixed. Stage 2, including templates, is excluded from this release.
 
 ## Goal

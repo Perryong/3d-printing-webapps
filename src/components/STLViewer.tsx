@@ -634,17 +634,19 @@ const STLViewer: React.FC = () => {
               isCameraRotating={isCameraRotating}
             />
             </details>
-            <details className="shrink-0 border-b bg-white text-slate-800 max-h-[30vh] overflow-y-auto">
+            <details className="shrink-0 border-b bg-white text-slate-800">
               <summary className="sticky top-0 z-10 cursor-pointer bg-white px-4 py-2 text-sm font-semibold">Customize STL dimensions</summary>
-              <div className="p-4 space-y-3">
+              <div>
               {slicingMethod === 'gcode' ? <p>G-code is read-only analysis. Upload the original STL model to customize or request a print quote.</p> : activeModel ? <>
-                <ModelDimensionsEditor key={geometryKey} model={activeModel} locked={proportionsLocked} onApply={applyDimensions} onDirty={setDimensionDraft} onLockChange={setProportionsLocked}/>
+                <ModelDimensionsEditor key={geometryKey} model={activeModel} locked={proportionsLocked} onApply={applyDimensions} onDirty={setDimensionDraft} onLockChange={setProportionsLocked}
+                  downloadDisabled={!checkoutFile || dimensionDraft || isLoading || snapshotKey!==geometryKey}
+                  onDownload={()=>{
+                    if(!checkoutFile)return; const url=URL.createObjectURL(checkoutFile);const a=document.createElement('a');a.href=url;a.download=checkoutFile.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+                  }}>
                 {snapshotBounds && <p>Placed build dimensions: {Object.values(snapshotBounds).map(n=>n.toFixed(2)).join(' × ')} mm</p>}
                 {oversize && <p role="alert" className="text-amber-800">Outside the A1 build volume. Download is available; quoting is blocked.</p>}
-                <button className="rounded border px-3 py-2 disabled:opacity-50" disabled={!checkoutFile || dimensionDraft || isLoading || snapshotKey!==geometryKey} onClick={()=>{
-                  if(!checkoutFile)return; const url=URL.createObjectURL(checkoutFile);const a=document.createElement('a');a.href=url;a.download=checkoutFile.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
-                }}>Download edited STL</button>
-              </> : <p>Upload an STL to edit overall dimensions. Photo references can be added in checkout.</p>}
+                </ModelDimensionsEditor>
+              </> : <p>Upload an STL to edit overall dimensions.</p>}
               </div>
             </details>
             <QuotePanel blockedReason={blockedReason} customization={activeModel && slicingMethod === 'simplified' ? {

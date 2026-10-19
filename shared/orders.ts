@@ -1,5 +1,5 @@
 import { z } from "zod";
-import {referenceContextSchema,type ReferenceContext} from "./references";
+import {customizationSchema,type Customization} from "./customization";
 import {
   jobSchema,
   type JobTotals,
@@ -33,7 +33,7 @@ export function setupReady(b: BusinessConfig) {
 }
 export const requestSchema = z
   .object({
-    ...referenceContextSchema.shape,
+    customization: customizationSchema.optional(),
     requestId: z.string().uuid(),
     modelPath: text,
     modelRevision: text,
@@ -57,7 +57,8 @@ export const requestSchema = z
     "Delivery address and six-digit postal code required",
   );
 export type QuoteRequest = z.infer<typeof requestSchema>;
-export type Order = ReferenceContext & {
+export type Order = {
+  customization?: Customization;
   id: string;
   customerUid: string;
   modelPath: string;
@@ -106,7 +107,7 @@ export type ActualCostInputs = {
   courierCostCents: number;
 };
 export type PrivateOrder = {
-  customization?: ReferenceContext["customization"];
+  customization?: Customization;
   actualInputs?: ActualCostInputs;
   buildBoundsMm?: { x: number; y: number; z: number };
   job: JobTotals;
