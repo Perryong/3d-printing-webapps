@@ -71,3 +71,14 @@ test('display modes preserve geometry, bounds, transforms and do not report mode
   assert.equal((next.mesh.material as THREE.MeshPhongMaterial).opacity, 0.3);
   m.dispose();
 });
+
+test('atomic dimension updates reject invalid axes and respect model locks',()=>{
+ const m=manager();const p=m.addModel('resize','resize.stl',new THREE.BoxGeometry(20,10,5));
+ m.updateModelTransform('resize',{scale:{x:2,y:NaN,z:1}});
+ assert.deepEqual(p.mesh.scale.toArray(),[1,1,1]);
+ m.setModelLocked('resize',true);
+ m.updateModelTransform('resize',{scale:{x:2,y:2,z:2}});
+ assert.deepEqual(p.mesh.scale.toArray(),[1,1,1]);
+ m.setModelLocked('resize',false);m.updateModelTransform('resize',{scale:{x:2,y:2,z:2}});
+ assert.deepEqual(p.mesh.scale.toArray(),[2,2,2]);m.dispose();
+});

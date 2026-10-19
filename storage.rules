@@ -6,6 +6,10 @@ service firebase.storage {
    allow read: if request.auth != null && (request.auth.uid == uid || owner());
    allow create: if request.auth != null && request.auth.uid == uid && file.matches('.*[.]stl') && request.resource.size > 0 && request.resource.size <= 50 * 1024 * 1024;
   }
+  // References are decoded and written by authenticated Functions, without download tokens.
+  match /references/{uid}/{requestId}/{file} {
+   allow read: if request.auth != null && (request.auth.uid == uid || owner());
+  }
   match /payment-qr/{file} {
    allow get: if request.auth != null;
    allow create: if owner() && request.resource.size <= 2 * 1024 * 1024 && request.resource.contentType.matches('image/(png|jpeg)');

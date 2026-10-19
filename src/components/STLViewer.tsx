@@ -8,7 +8,9 @@ import FileUpload from './FileUpload';
 import SettingsPanel from './SettingsPanel';
 import PrintTimeDisplay from './PrintTimeDisplay';
 import QuotePanel from './checkout/QuotePanel';
-import { STLExporter } from 'three/examples/jsm/exporters/STLExporter.js';
+import { createModelSnapshot } from '../utils/modelSnapshot';
+import { geometryDimensions, type XYZ } from '../utils/modelDimensions';
+import ModelDimensionsEditor from './ModelDimensionsEditor';
 import { toPreliminaryJob } from '../utils/printEstimator';
 import ViewerControls from './ViewerControls';
 import ViewerDisplay from './ViewerDisplay';
@@ -66,6 +68,10 @@ const STLViewer: React.FC = () => {
   const [viewMode, setViewMode] = useState<ViewMode>('viewer');
   const [checkoutFile, setCheckoutFile] = useState<File | null>(null);
   const [modelRevision, setModelRevision] = useState('');
+  const [snapshotKey,setSnapshotKey] = useState('');
+  const [snapshotBounds, setSnapshotBounds] = useState<XYZ | null>(null);
+  const [dimensionDraft, setDimensionDraft] = useState(false);
+  const [proportionsLocked, setProportionsLocked] = useState(true);
   const [models, setModels] = useState<ModelData[]>([]);
   const [selectedModelId, setSelectedModelId] = useState<string | null>(null);
   const [transformMode, setTransformMode] = useState<'select' | 'move' | 'rotate' | 'scale'>('select');
@@ -205,6 +211,7 @@ const STLViewer: React.FC = () => {
       }
       geometry.dispose();
     } catch (err) {
+      setCheckoutFile(null); setSelectedModelId(null);
       setError(err instanceof Error ? err.message : 'Failed to load STL file');
     } finally {
       setIsLoading(false);
@@ -381,34 +388,42 @@ const STLViewer: React.FC = () => {
   const zoomIn = useCallback(() => sceneRefs.current?.zoom(0.8), []);
   const zoomOut = useCallback(() => sceneRefs.current?.zoom(1.25), []);
 
-  // Use the selected, transformed part for both the header and the estimate.
+  const activeModel = models.find(m => m.id === selectedModelId);
+  const geometryKey = JSON.stringify([selectedModelId, activeModel?.transform, slicingMethod]);
+  useEffect(() => { setDimensionDraft(false); }, [geometryKey]);
+  useEffect(() => { setProportionsLocked(true); }, [selectedModelId]);
+  // Ignore late exports after another edit or file selection. Display controls do not rebuild geometry.
   useEffect(() => {
-    if (slicingMethod !== 'simplified') { setCheckoutFile(null); return; }
-    const model = models.find(model => model.id === selectedModelId);
-    if (!model) {
-      setCheckoutFile(null);
-      setModelRevision(crypto.randomUUID());
-      setModelInfo(null);
-      setPrintTimeEstimate(null);
+    let active = true;
+    setCheckoutFile(null); setModelRevision(''); setSnapshotBounds(null);
+    if (slicingMethod !== 'simplified' || !activeModel) {
+      if (slicingMethod === 'simplified') { setModelInfo(null); setPrintTimeEstimate(null); }
       return;
     }
-    model.mesh.updateMatrixWorld(true);
-    const geometry = model.mesh.geometry.clone().applyMatrix4(model.mesh.matrixWorld);
-    geometry.rotateX(Math.PI / 2); // Convert the Y-up display back to printer Z-up.
-    geometry.computeBoundingBox();
-    const size = geometry.boundingBox!.getSize(new THREE.Vector3());
-    setModelInfo({
-      vertices: geometry.attributes.position.count,
-      triangles: geometry.attributes.position.count / 3,
-      size: { x: size.x.toFixed(2), y: size.y.toFixed(2), z: size.z.toFixed(2) },
-      volume: convertMmToCm(calculateMeshVolume(geometry)).toFixed(2)
-    });
-    setPrintTimeEstimate(estimatePrintTime(geometry, printSettings));
-    const exported = new STLExporter().parse(new THREE.Mesh(geometry), {binary:true});
-    setCheckoutFile(new File([exported], 'selected-part.stl', {type:'application/octet-stream'}));
-    setModelRevision(crypto.randomUUID());
-    geometry.dispose();
-  }, [models, selectedModelId, printSettings, slicingMethod]);
+    createModelSnapshot(activeModel.mesh, activeModel.name).then(snapshot => {
+      try {
+        if (!active) return;
+        const {geometry,boundsMm:size}=snapshot;
+        setModelInfo({vertices: geometry.attributes.position.count,
+          triangles: geometry.index ? geometry.index.count / 3 : geometry.attributes.position.count / 3,
+          size:{x:size.x.toFixed(2),y:size.y.toFixed(2),z:size.z.toFixed(2)},
+          volume:convertMmToCm(calculateMeshVolume(geometry)).toFixed(2)});
+        setPrintTimeEstimate(estimatePrintTime(geometry,printSettings));
+        setSnapshotKey(geometryKey);setCheckoutFile(snapshot.file);setModelRevision(snapshot.revision);setSnapshotBounds(size);
+      } finally { snapshot.geometry.dispose(); }
+    }).catch(e=>{if(active) setError('STL export failed: '+e.message);});
+    return ()=>{active=false;};
+  }, [geometryKey, printSettings]);
+  const applyDimensions = (scale:XYZ) => {
+    if(!activeModel || activeModel.locked) return;
+    modelManagerRef.current?.updateModelTransform(activeModel.id,{scale});
+    setModels([...modelManagerRef.current!.getAllModels()]);
+    sceneRefs.current?.fit(activeModel.mesh);
+  };
+  const oversize = snapshotBounds && Object.values(snapshotBounds).some(v=>v>256.001 || v<=0);
+  const blockedReason = isLoading || !checkoutFile || snapshotKey!==geometryKey ? 'Upload an STL and wait for its export to request a print quote.'
+    : dimensionDraft ? 'Apply or reset your dimension edits before requesting a quote.'
+    : oversize ? 'Placed dimensions must fit the A1 build volume (256 × 256 × 256 mm). Resize or rotate before quoting. You can still download the STL.' : '';
 
   // Hide settings when switching away from viewer mode
   useEffect(() => {
@@ -619,7 +634,24 @@ const STLViewer: React.FC = () => {
               isCameraRotating={isCameraRotating}
             />
             </details>
-            <QuotePanel job={printTimeEstimate && slicingMethod === 'simplified' ? toPreliminaryJob(printTimeEstimate, 1) : null} modelFile={checkoutFile} modelRevision={modelRevision} inspecting={fullscreen} />
+            <details className="shrink-0 border-b bg-white text-slate-800 max-h-[30vh] overflow-y-auto">
+              <summary className="sticky top-0 z-10 cursor-pointer bg-white px-4 py-2 text-sm font-semibold">Customize STL dimensions</summary>
+              <div className="p-4 space-y-3">
+              {slicingMethod === 'gcode' ? <p>G-code is read-only analysis. Upload the original STL model to customize or request a print quote.</p> : activeModel ? <>
+                <ModelDimensionsEditor key={geometryKey} model={activeModel} locked={proportionsLocked} onApply={applyDimensions} onDirty={setDimensionDraft} onLockChange={setProportionsLocked}/>
+                {snapshotBounds && <p>Placed build dimensions: {Object.values(snapshotBounds).map(n=>n.toFixed(2)).join(' × ')} mm</p>}
+                {oversize && <p role="alert" className="text-amber-800">Outside the A1 build volume. Download is available; quoting is blocked.</p>}
+                <button className="rounded border px-3 py-2 disabled:opacity-50" disabled={!checkoutFile || dimensionDraft || isLoading || snapshotKey!==geometryKey} onClick={()=>{
+                  if(!checkoutFile)return; const url=URL.createObjectURL(checkoutFile);const a=document.createElement('a');a.href=url;a.download=checkoutFile.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+                }}>Download edited STL</button>
+              </> : <p>Upload an STL to edit overall dimensions. Photo references can be added in checkout.</p>}
+              </div>
+            </details>
+            <QuotePanel blockedReason={blockedReason} customization={activeModel && slicingMethod === 'simplified' ? {
+              sourceName:activeModel.name,originalBoundsMm:geometryDimensions(activeModel.originalGeometry),
+              editedBoundsMm:Object.fromEntries(Object.entries(geometryDimensions(activeModel.originalGeometry)).map(([a,v])=>[a,v*activeModel.transform.scale[a as keyof XYZ]])) as XYZ,
+              scale:activeModel.transform.scale,proportionsLocked
+            }:undefined} job={printTimeEstimate && slicingMethod === 'simplified' ? toPreliminaryJob(printTimeEstimate, 1) : null} modelFile={checkoutFile} modelRevision={modelRevision} inspecting={fullscreen} />
             <div ref={inspectionRef} className="relative flex min-h-0 flex-1 flex-col bg-slate-100" data-testid="inspection-viewer">
             <ViewerToolbar mode={displayMode} onModeChange={mode => { setDisplayMode(mode); modelManagerRef.current?.setDisplayMode(mode); }}
               dimensions={dimensionsVisible} grid={gridVisible}

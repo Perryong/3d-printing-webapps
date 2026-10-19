@@ -359,3 +359,13 @@ your inbox. Never share the password. Confirm the sliced quote first; customers
 then accept it, scan the bank-issued QR, enter the exact total and use the order
 reference. Their payment claim remains pending until you match the amount and
 reference against your bank transactions and approve it in the dashboard.
+
+### STL customization and photo references
+
+Open **Customize STL dimensions** after uploading an STL. Enter overall X/Y/Z dimensions in millimetres, apply the change, and use **Download edited STL** to save the same binary snapshot sent with a quote request. Proportions are locked by default; independent scaling changes holes, walls and clearances too. Dimensions follow the original model axes; placed build dimensions are shown separately. An oversize model can be downloaded, but must fit the A1's 256 × 256 × 256 mm volume before quoting. Applying changes creates a new draft; submitted orders retain their original snapshot.
+
+In **Get print quote / My orders**, optionally attach up to three JPEG/PNG reference photos (5 MiB and 20 megapixels each), notes and one known measurement. Photos stay local until submission and do not automatically generate CAD. Customers and the owner can open **Model & photo references** on an order to review them. G-code remains read-only analysis; upload the original STL for customization and quoting.
+
+Reference images are decoded on the server with `sharp`, stored immutably in the dedicated checkout bucket under `references/{customerUid}/{requestId}/{assetId}.png|jpg`, and served through authenticated Functions without public download tokens. Upload retries retain the same paths. Abandoned uploads are not automatically deleted; any future cleanup must first exclude assets referenced by committed orders. Owner slicing and manual PayNow verification are unchanged.
+
+Rollout: deploy the optional-field-compatible checkout Functions and dedicated bucket rules before the frontend (`npm run deploy:checkout`, using `firebase.production.json`). Do not deploy rules to the shared project's legacy bucket. Validate with `npm test`, `npm run test:emulator` and `npm run test:e2e`; automated checkout tests use the `demo-print-checkout` emulators, never real orders.

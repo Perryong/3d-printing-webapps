@@ -31,8 +31,9 @@ export function callable<T extends z.ZodTypeAny>(
   schema: T,
   fn: (data: z.infer<T>, r: CallableRequest) => Promise<unknown>,
   ownerOnly = false,
+  options: {memory?: "512MiB"; concurrency?: number} = {},
 ) {
-  return onCall({ region: "asia-southeast1", maxInstances: 5 }, async (r) => {
+  return onCall({ region: "asia-southeast1", maxInstances: 5, ...options }, async (r) => {
     if (!r.auth) throw new HttpsError("unauthenticated", "Sign in first");
     if (ownerOnly) owner(r);
     try {

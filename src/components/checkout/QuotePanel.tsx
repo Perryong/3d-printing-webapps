@@ -8,23 +8,47 @@ import { checkoutMode, ensureCustomerSession } from "../../lib/firebase";
 import {
   callCheckout,
   uploadModel,
+  uploadReferences,
   watchOrders,
   sgd,
 } from "../../services/checkoutService";
 import CheckoutForm, { type CheckoutDetails } from "./CheckoutForm";
 import OrderStatus from "./OrderStatus";
 import "./checkout.css";
+import ReferencePhotos from "../customization/ReferencePhotos";
+import {
+  emptyReferences,
+  referenceContext,
+  type ReferenceDraft,
+} from "../customization/referenceDraft";
+import {
+  referenceContextSchema,
+  type Customization,
+} from "../../../shared/references";
 export default function QuotePanel({
   job,
   modelFile,
   modelRevision,
   inspecting = false,
+  blockedReason = "",
+  customization,
 }: {
   job: JobTotals | null;
   modelFile: File | null;
   modelRevision: string;
   inspecting?: boolean;
+  blockedReason?: string;
+  customization?: Customization;
 }) {
+  const [photoPending, setPhotoPending] = useState(false);
+  const [references, setReferences] = useState<ReferenceDraft>(emptyReferences);
+  const context = referenceContext(references);
+  const contextValid = referenceContextSchema.safeParse(context).success;
+  const contextKey = JSON.stringify([
+    context,
+    customization,
+    references.photos.map((p) => p.id),
+  ]);
   const [open, setOpen] = useState(false),
     [quantity, setQuantity] = useState(1),
     [fulfilment, setFulfilment] = useState<Fulfilment>("collection"),
@@ -32,16 +56,29 @@ export default function QuotePanel({
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [orderIds, setOrderIds] = useState<string[]>([]);
-  useEffect(() => { if (inspecting) setOpen(false); }, [inspecting]);
+  useEffect(() => {
+    if (inspecting) setOpen(false);
+  }, [inspecting]);
   const generation = useRef(0),
     attempt = useRef<{ key: string; id: string }>();
   const jobKey = JSON.stringify(job);
+  const draftKey = JSON.stringify([
+    jobKey,
+    modelRevision,
+    quantity,
+    fulfilment,
+    contextKey,
+    blockedReason,
+    photoPending,
+  ]);
+  const currentDraft = useRef(draftKey);
+  currentDraft.current = draftKey;
   useEffect(() => {
     setQuote(undefined);
     setError("");
     generation.current++;
     attempt.current = undefined;
-  }, [jobKey, modelRevision, quantity, fulfilment]);
+  }, [draftKey]);
   useEffect(() => {
     if (!open || checkoutMode === "disabled") return;
     let stop = () => {},
@@ -63,8 +100,8 @@ export default function QuotePanel({
     };
   }, [open]);
   async function preview() {
-    if (!job) return;
-    const revision = generation.current;
+    if (!job || blockedReason || !contextValid || photoPending) return;
+    const revision = draftKey;
     setBusy(true);
     setError("");
     try {
@@ -72,7 +109,7 @@ export default function QuotePanel({
         job: { ...job, quantity },
         fulfilment,
       });
-      if (revision === generation.current) setQuote(q);
+      if (revision === currentDraft.current) setQuote(q);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -80,14 +117,18 @@ export default function QuotePanel({
     }
   }
   async function submit(details: CheckoutDetails) {
-    if (!job || !modelFile) return;
+    if (!job || !modelFile || blockedReason || !contextValid || photoPending)
+      return;
+    const submittingDraft = draftKey;
     const payload = {
         job: { ...job, quantity },
         fulfilment,
         modelRevision,
+        ...context,
+        ...(customization ? { customization } : {}),
         ...details,
       },
-      key = JSON.stringify(payload);
+      key = JSON.stringify([payload, references.photos.map((p) => p.id)]);
     if (attempt.current?.key !== key)
       attempt.current = { key, id: crypto.randomUUID() };
     const requestId = attempt.current.id;
@@ -95,9 +136,21 @@ export default function QuotePanel({
     setError("");
     try {
       const modelPath = await uploadModel(modelFile, requestId);
-      await callCheckout("requestQuote", { ...payload, requestId, modelPath });
-      attempt.current = undefined;
-      setQuote(undefined);
+      const assets = await uploadReferences(references.photos, requestId);
+      if (submittingDraft !== currentDraft.current)
+        throw new Error(
+          "Your draft changed during upload. Review it and submit again.",
+        );
+      await callCheckout("requestQuote", {
+        ...payload,
+        requestId,
+        modelPath,
+        references: assets,
+      });
+      if (submittingDraft === currentDraft.current) {
+        attempt.current = undefined;
+        setQuote(undefined);
+      }
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -151,7 +204,35 @@ export default function QuotePanel({
                     <option value="delivery">Delivery +S$5 per order</option>
                   </select>
                 </label>
-                {job && modelFile ? (
+                <ReferencePhotos
+                  draft={references}
+                  onChange={setReferences}
+                  disabled={busy}
+                  onPending={setPhotoPending}
+                />
+                {!contextValid && (
+                  <p role="alert">
+                    Enter a measurement label and a positive value, or leave
+                    both blank.
+                  </p>
+                )}
+                {!modelFile && references.photos.length > 0 && (
+                  <p>
+                    Reference photo only — upload an STL to request a print
+                    quote.
+                  </p>
+                )}
+                {customization && (
+                  <p className="text-sm break-all">
+                    Quoting {customization.sourceName}:{" "}
+                    {Object.values(customization.editedBoundsMm)
+                      .map((n) => n.toFixed(2))
+                      .join(" × ")}{" "}
+                    mm. The edited STL will be uploaded.
+                  </p>
+                )}
+                {blockedReason && <p role="status">{blockedReason}</p>}
+                {job && modelFile && !blockedReason ? (
                   <>
                     <p className="text-sm">
                       Preliminary: {(job.hours * quantity).toFixed(2)} hours ·{" "}
@@ -159,7 +240,12 @@ export default function QuotePanel({
                       full batch time, supports and purge in Bambu Studio.
                     </p>
                     <button
-                      disabled={!Number.isInteger(quantity) || quantity < 1}
+                      disabled={
+                        !Number.isInteger(quantity) ||
+                        quantity < 1 ||
+                        !contextValid ||
+                        photoPending
+                      }
                       onClick={preview}
                     >
                       Estimate price
@@ -168,7 +254,7 @@ export default function QuotePanel({
                 ) : (
                   <p>Load and select an STL to request a quote.</p>
                 )}
-                {quote && (
+                {quote && !blockedReason && contextValid && !photoPending && (
                   <>
                     <p className="text-xl font-semibold">
                       Estimated total {sgd(quote.totalCents)}

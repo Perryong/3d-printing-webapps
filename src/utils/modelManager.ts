@@ -244,6 +244,8 @@ export class ModelManager {
     const model = this.models.get(id);
     if (!model || model.locked) return;
 
+    if (transform.scale && Object.values(transform.scale).some(v => !Number.isFinite(v) || v <= 0)) return;
+
     // Update the transform state
     if (transform.position) {
       model.transform.position = { ...transform.position };
