@@ -73,6 +73,11 @@ test("dimension drafts, proportional/unlocked edit, download and quote reference
   await expect(
     page.getByText("Placed build dimensions: 20.00 × 10.00 × 8.00 mm"),
   ).toBeVisible();
+  await page.getByLabel('Lock proportions for dimension edits').check();
+  await page.getByLabel('X dimension (mm)',{exact:true}).fill('40');
+  await expect(page.getByLabel('Z dimension (mm)',{exact:true})).toHaveValue('16');
+  await page.getByRole('button',{name:'Apply dimensions'}).click();
+  await expect(page.getByText('Placed build dimensions: 40.00 × 20.00 × 16.00 mm')).toBeVisible();
   const finalDownload=page.waitForEvent('download');
   await page.getByRole('button',{name:'Download edited STL'}).click();
   const expectedBytes=await readFile((await (await finalDownload).path())!);

@@ -11,19 +11,21 @@ export function scaleForDimensions(
   target: XYZ,
   editedAxis: keyof XYZ,
   lockRatio: boolean,
+  proportions: XYZ = original,
 ): XYZ {
   for (const a of axes)
     if (
       !Number.isFinite(original[a]) ||
       original[a] <= 0 ||
       !Number.isFinite(target[a]) ||
-      target[a] <= 0
+      target[a] <= 0 ||
+      !Number.isFinite(proportions[a]) || proportions[a] <= 0
     )
       throw new Error(
         "Dimensions must be finite and greater than zero. Flat geometry cannot be resized.",
       );
-  const ratio = target[editedAxis] / original[editedAxis];
+  const ratio = target[editedAxis] / proportions[editedAxis];
   return Object.fromEntries(
-    axes.map((a) => [a, lockRatio ? ratio : target[a] / original[a]]),
+    axes.map((a) => [a, (lockRatio ? proportions[a] * ratio : target[a]) / original[a]]),
   ) as XYZ;
 }

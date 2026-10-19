@@ -1,6 +1,6 @@
 # Model customization and photo-assisted design
 
-Status: Release 1 implemented locally on codex/model-customization; final review pending. Stage 2, including templates, is excluded from this release.
+Status: Release 1 implemented locally on codex/model-customization; independent review completed and its relocking-proportions finding fixed. Stage 2, including templates, is excluded from this release.
 
 ## Goal
 Customers can attach reference photos, resize their uploaded STL in millimetres, preview and download the resulting STL, then request a quote for exactly that revision. A later template-based CAD service serves customers who have photos but no source model.

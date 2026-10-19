@@ -23,3 +23,8 @@ test("dimension scale is absolute, proportional by default, independently editab
     scaleForDimensions({ x: 20, y: 10, z: 0 }, original, "x", true),
   );
 });
+
+test('relocking proportions preserves the applied customized shape',()=>{
+ const original={x:20,y:10,z:5},current={x:20,y:10,z:8};
+ assert.deepEqual(scaleForDimensions(original,{x:40,y:10,z:8},'x',true,current),{x:2,y:2,z:3.2});
+});

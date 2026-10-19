@@ -95,3 +95,15 @@
 
 ## Completion boundary
 Release 1 delivers genuine STL resizing/export and photo-supported quoting. It does not reconstruct CAD from G-code or arbitrary photos, infer holes/walls from a triangle mesh, or automatically slice/send prints. This plan is a proposal for user review, not a claim those features already exist.
+
+## Implementation verification — 19 October 2026
+
+Release 1 is implemented on `codex/model-customization`. Independent review found one important edge case: relocking proportions after an independent edit used the original shape. The fix preserves the currently applied proportions. Both unit and browser tests reproduced the bug before the fix and passed afterward.
+
+- 25 unit tests; 3 emulator integration suites; 10 desktop/mobile browser tests passed.
+- App and Functions TypeScript checks, Functions bundle and production-mode frontend build passed. Existing frontend bundle-size warning remains.
+- Browser tests compare downloaded and uploaded STL bytes, exercise delayed requests, reset, independent scaling/relocking, unsupported inputs, oversize restrictions and the existing manual payment flow.
+- Supplied card holder resized from approximately 60 × 14.47 × 103 mm to 66 × 15.91 × 113.30 mm. Local demo order SG-A8E07668F80C4D4C contains the exact downloaded bytes and one reference photo; payment remains not_requested.
+- Production deployment, merge and live-order mutations were not performed.
+
+Implementation decisions: authenticated callable image transfer replaces browser Storage upload/CORS to avoid permanent photo download tokens (some callable transfer overhead); bounded model metadata is visible in the customer order and also copied to the private order (small storage duplication); changes were consolidated into an implementation commit and review-fix commit (less per-task history). Knob templates and photo-to-CAD remain outside this release. Production load is not measured; abandoned-reference cleanup remains deferred to avoid deleting committed assets, so abandoned uploads may retain storage cost.

@@ -31,13 +31,13 @@ export default function ModelDimensionsEditor({
   );
   const [dirty, setDirty] = useState(false),
     [error, setError] = useState("");
-  function change(axis: keyof XYZ, value: string) {
+  function change(axis: keyof XYZ, value: string, proportional = locked) {
     const next = { ...values, [axis]: value };
-    if (locked && Number(value) > 0 && original[axis] > 0)
+    if (proportional && Number(value) > 0 && current[axis] > 0)
       for (const a of axes)
         if (a !== axis)
           next[a] = String(
-            Number(((original[a] * Number(value)) / original[axis]).toFixed(4)),
+            Number(((current[a] * Number(value)) / current[axis]).toFixed(4)),
           );
     setValues(next);
     setDirty(true);
@@ -51,7 +51,7 @@ export default function ModelDimensionsEditor({
       ) as XYZ;
       const scale = reset
         ? { x: 1, y: 1, z: 1 }
-        : scaleForDimensions(original, target, "x", locked);
+        : scaleForDimensions(original, target, "x", locked, current);
       onApply(scale);
       setValues(Object.fromEntries(axes.map(a=>[a,String(Number((original[a]*scale[a]).toFixed(4)))])) as Record<keyof XYZ,string>);
       onDirty(false);
@@ -78,6 +78,7 @@ export default function ModelDimensionsEditor({
             checked={locked}
             onChange={(e) => {
               onLockChange(e.target.checked);
+              if (e.target.checked && dirty) change("x",values.x,true);
             }}
           />
           Lock proportions for dimension edits
