@@ -10,6 +10,14 @@ Watch the flow from STL upload and model inspection to a confirmed quote, PayNow
 
 This recording uses an illustrative S$15 delivery quote and simulated payment states. No payment was made and no real customer orders were changed. The QR is shown for demonstration only—do not pay it. For real orders, the owner confirms the price after slicing and verifies the bank transfer before the receipt appears.
 
+## Resized wallet payment demo
+
+Watch a customer accept the resized wallet's S$17.62 delivery quote, view the demo PayNow screen, submit a payment claim, and receive a receipt after manual owner verification.
+
+![Demo payment journey: quote acceptance, PayNow instructions, owner verification, and receipt](docs/media/wallet-payment-journey-demo.gif)
+
+This walkthrough uses only local Firebase emulator data. No money was transferred, no real customer orders were changed, and no live payment QR is included. For real orders, verify the matching transfer in your bank account before approving payment.
+
 ## ✨ Features
 
 ### 📁 File Support
