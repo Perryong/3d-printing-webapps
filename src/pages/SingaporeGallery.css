@@ -1,0 +1,310 @@
+.sg-gallery {
+  background:#f6f3eb;
+  color:#253b35;
+  min-height:100dvh;
+  font:15px/1.5 Arial,sans-serif}
+
+.sg-gallery * {
+  box-sizing:border-box}
+.sg-gallery a {
+  color:inherit;
+  text-decoration:none}
+.sg-gallery a:focus-visible,.sg-gallery button:focus-visible {
+  outline:3px solid #bc4936;
+  outline-offset:5px}
+.sg-nav,.sg-main,.sg-footer {
+  max-width:1420px;
+  margin:auto;
+  padding-left:48px;
+  padding-right:48px}
+.sg-nav {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:20px;
+  padding-top:27px;
+  padding-bottom:27px;
+  border-bottom:1px solid #d8ddd2}
+.sg-brand {
+  display:flex;
+  align-items:center;
+  gap:12px;
+  font-size:11px;
+  line-height:1.35;
+  letter-spacing:.08em;
+  text-transform:uppercase}
+.sg-brand strong {
+  font-weight:600}
+.sg-mark {
+  display:grid;
+  place-items:center;
+  width:44px;
+  height:44px;
+  background:#b94836;
+  color:#fff7e9;
+  font:600 18px Georgia,serif;
+  border-radius:50%}
+.sg-workspace,.sg-footer a {
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:12px}
+.sg-intro {
+  display:grid;
+  grid-template-columns:1fr 270px;
+  gap:70px;
+  padding:74px 0 58px;
+  align-items:center}
+.sg-eyebrow {
+  font-size:11px;
+  letter-spacing:.15em;
+  text-transform:uppercase;
+  font-weight:700;
+  margin:0 0 22px}
+.sg-intro h1 {
+  font:normal clamp(48px,5.8vw,84px)/1.02 Georgia,serif;
+  letter-spacing:-.045em;
+  margin:0 0 26px}
+.sg-intro h1 em {
+  color:#ad4939;
+  font-weight:400}
+.sg-lead {
+  max-width:540px;
+  color:#627069;
+  line-height:1.8;
+  font-size:15px;
+  margin:0 0 26px}
+.sg-explore {
+  display:inline-flex;
+  align-items:center;
+  gap:30px;
+  border-bottom:1px solid #253b35;
+  padding-bottom:8px;
+  font-weight:600;
+  font-size:13px}
+.sg-edition {
+  background:#e8eddf;
+  border-radius:130px 130px 9px 9px;
+  text-align:center;
+  padding:38px 25px 25px;
+  position:relative}
+.sg-edition>svg {
+  margin:0 auto 3px}
+.sg-edition-number {
+  display:block;
+  font:normal 100px/1.1 Georgia,serif;
+  letter-spacing:-.06em;
+  color:#6f8568}
+.sg-edition>p {
+  font:italic 24px/1.15 Georgia,serif;
+  margin:5px 0 25px}
+.sg-edition>div {
+  display:flex;
+  justify-content:space-between;
+  gap:14px;
+  font-size:9px;
+  text-transform:uppercase;
+  letter-spacing:.04em;
+  border-top:1px solid #c4ceb9;
+  padding-top:17px}
+.sg-update {
+  display:flex;
+  gap:22px;
+  align-items:center;
+  border-top:1px solid #d8ddd2;
+  border-bottom:1px solid #d8ddd2;
+  padding:16px 0;
+  font-size:12px}
+.sg-update>span {
+  color:#ad4939;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  font-size:10px;
+  font-weight:700}
+.sg-update p {
+  margin:0}
+.sg-section-heading {
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:15px;
+  margin:42px 0 22px}
+.sg-section-heading h2 {
+  font:normal 30px Georgia,serif;
+  margin:0}
+.sg-section-heading p {
+  font-size:11px;
+  color:#68756e;
+  margin:0}
+.sg-grid {
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:25px}
+.sg-product {
+  border:1px solid #d8ddd2;
+  border-radius:12px;
+  background:#fdfbf6;
+  overflow:hidden;
+  min-width:0;
+  display:flex;
+  flex-direction:column}
+.sg-product-top {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:18px 20px 0}
+.sg-index {
+  font:italic 18px Georgia,serif;
+  color:#7e8980}
+.sg-badge {
+  font-size:9px;
+  text-transform:uppercase;
+  letter-spacing:.07em;
+  background:#ebece5;
+  border-radius:20px;
+  padding:5px 9px;
+  color:#68756e}
+.sg-new {
+  background:#f6e4d9;
+  color:#a84c34}
+.sg-viewer {
+  width:100%;
+  height:390px;
+  border:0;
+  display:block;
+  background:#fdfbf6}
+.sg-product-body {
+  padding:6px 22px 20px;
+  display:flex;
+  flex-direction:column;
+  flex:1}
+.sg-dimensions {
+  font-size:10px;
+  color:#7c867b;
+  letter-spacing:.05em;
+  margin:0 0 8px}
+.sg-product h3 {
+  font:normal 25px/1.2 Georgia,serif;
+  letter-spacing:-.02em;
+  margin:0 0 12px}
+.sg-description {
+  font-size:13px;
+  line-height:1.7;
+  color:#5e6d63;
+  margin:0 0 16px}
+.sg-print-note {
+  font-size:11px;
+  line-height:1.6;
+  color:#748071;
+  margin:0 0 22px}
+.sg-downloads {
+  display:flex;
+  align-items:center;
+  gap:16px;
+  margin-top:auto;
+  border-top:1px solid #e1e5db;
+  padding-top:15px;
+  font-size:11px}
+.sg-downloads a {
+  display:inline-flex;
+  gap:6px;
+  align-items:center}
+.sg-downloads a:last-child {
+  margin-left:auto}
+.sg-stl {
+  font-weight:700}
+.sg-concept-note {
+  font-size:10px;
+  color:#8a6d51}
+.sg-making {
+  display:grid;
+  grid-template-columns:1fr 1.5fr;
+  gap:60px;
+  padding:40px;
+  margin:55px 0;
+  background:#e8eddf;
+  border-radius:12px}
+.sg-making h2 {
+  font:normal 38px/1.1 Georgia,serif;
+  margin:0;
+  max-width:280px}
+.sg-making h3 {
+  font-size:14px;
+  margin:0 0 12px}
+.sg-making p:not(.sg-eyebrow) {
+  font-size:12px;
+  line-height:1.9;
+  color:#5e6d63;
+  margin:0 0 12px}
+.sg-footer {
+  border-top:1px solid #d8ddd2;
+  display:flex;
+  justify-content:space-between;
+  gap:15px;
+  padding-top:24px;
+  padding-bottom:24px;
+  font-size:11px;
+  color:#6a796c}
+
+@media(min-width:1400px) {
+  .sg-viewer {
+  height:395px}
+}
+
+@media(max-width:1100px) {
+  .sg-grid {
+  grid-template-columns:repeat(2,minmax(0,1fr))}
+.sg-intro {
+  gap:35px;
+  grid-template-columns:1fr 230px}
+.sg-nav,.sg-main,.sg-footer {
+  padding-left:28px;
+  padding-right:28px}
+}
+
+@media(max-width:640px) {
+  .sg-nav,.sg-main,.sg-footer {
+  padding-left:18px;
+  padding-right:18px}
+.sg-nav {
+  padding-top:18px;
+  padding-bottom:18px}
+.sg-workspace {
+  font-size:10px}
+.sg-intro {
+  grid-template-columns:1fr;
+  padding:40px 0 32px;
+  gap:25px}
+.sg-intro h1 {
+  font-size:51px}
+.sg-edition {
+  display:none}
+.sg-lead {
+  font-size:14px}
+.sg-update {
+  align-items:flex-start;
+  flex-direction:column;
+  gap:5px}
+.sg-grid {
+  grid-template-columns:1fr;
+  gap:20px}
+.sg-section-heading {
+  align-items:flex-start;
+  flex-direction:column;
+  gap:8px;
+  margin-top:30px}
+.sg-viewer {
+  height:390px}
+.sg-making {
+  grid-template-columns:1fr;
+  padding:26px;
+  gap:24px;
+  margin:32px 0}
+.sg-making h2 {
+  font-size:32px}
+.sg-footer {
+  flex-direction:column}
+.sg-product-body {
+  padding-left:20px;
+  padding-right:20px}
+}
