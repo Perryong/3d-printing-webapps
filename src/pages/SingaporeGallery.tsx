@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { ArrowDown, ArrowLeft, ArrowUpRight, Box, Download } from "lucide-react";
 import "./SingaporeGallery.css";
 
@@ -18,6 +18,7 @@ interface Product {
 }
 
 export default function SingaporeGallery() {
+  const { hash } = useLocation();
   const [products, setProducts] = useState<Product[]>([]);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
@@ -31,6 +32,14 @@ export default function SingaporeGallery() {
       .catch(error => { if (error.name !== "AbortError") setFailed(true); });
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    if (!hash || !products.length) return;
+    const product = products.find(item => hash === `#${encodeURIComponent(item.id)}`);
+    const target = document.getElementById(product?.id ?? "collection");
+    if (product) target?.focus({ preventScroll: true });
+    target?.scrollIntoView({ block: "start" });
+  }, [hash, products]);
 
   return (
     <div className="sg-gallery">
@@ -61,12 +70,12 @@ export default function SingaporeGallery() {
           {failed ? <p role="alert">The collection could not load. <button onClick={() => window.location.reload()}>Reload the page</button></p> : products.length === 0 ? <p role="status">Loading the collection…</p> : null}
           <div className="sg-grid">
             {products.map((product, index) => (
-              <article className="sg-product" key={product.id}>
+              <article className="sg-product" key={product.id} id={product.id} tabIndex={-1} aria-labelledby={`title-${product.id}`}>
                 <div className="sg-product-top"><span className="sg-index">{String(index + 1).padStart(2, "0")}</span><span className={product.updated ? "sg-badge sg-new" : "sg-badge"}>{product.updated ? "New design" : product.status === "Concept only" ? "Concept" : "Prototype"}</span></div>
                 <iframe className="sg-viewer" src={product.viewer} title={`Interactive 3D view of ${product.title}`} loading="lazy" sandbox="allow-scripts" />
                 <div className="sg-product-body">
                   <p className="sg-dimensions">{product.dimensions}</p>
-                  <h3>{product.title}</h3>
+                  <h3 id={`title-${product.id}`}>{product.title}</h3>
                   <p className="sg-description">{product.description}</p>
                   {product.id === "wafer-coin-collector" && (
                     <div className="sg-coin-fit">

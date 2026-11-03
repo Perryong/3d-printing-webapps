@@ -6,6 +6,7 @@ import { Link, useSearchParams } from "react-router-dom";
 const Index = () => {
   const [params] = useSearchParams();
   const productId = params.get("product");
+  const collectionUrl = productId ? `/singapore-gallery#${encodeURIComponent(productId)}` : "/singapore-gallery";
   const model = useQuery({
     queryKey: ["gallery-stl", productId],
     enabled: !!productId,
@@ -29,12 +30,12 @@ const Index = () => {
         <p role="alert">{model.error.message}</p>
         <button onClick={() => model.refetch()}>Try again</button>
       </> : <p role="status">Opening the STL in the print workspace…</p>}
-      <Link to="/singapore-gallery#collection" className="underline">Back to collection</Link>
+      <Link to={collectionUrl} className="underline">Back to collection</Link>
     </main>
   );
 
   return <>
-    <Link to="/singapore-gallery" className="fixed bottom-5 right-5 z-50 rounded-full border border-emerald-200 bg-emerald-950 px-5 py-3 text-sm font-medium text-white shadow-lg hover:bg-emerald-900">Singapore collection ↗</Link>
+    <Link to={collectionUrl} className="fixed bottom-5 right-5 z-50 rounded-full border border-emerald-200 bg-emerald-950 px-5 py-3 text-sm font-medium text-white shadow-lg hover:bg-emerald-900">{productId ? "Back to collection" : "Singapore collection ↗"}</Link>
     <STLViewer key={productId} initialFile={model.data} />
   </>;
 };

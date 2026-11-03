@@ -65,4 +65,9 @@ test('gallery opens its product in the workspace and survives refresh', async ({
   await page.reload();
   await expect(width).toBeVisible();
   await expect(page.getByRole('combobox',{name:'Selected file'}).locator('option:checked')).toHaveText('dragon-playground-watch-holder.stl');
+  await page.getByRole('link', {name: 'Back to collection'}).click();
+  await expect(page).toHaveURL(/\/singapore-gallery#dragon-playground-watch-holder$/);
+  const card = page.getByRole('article', {name: 'Dragon Playground Watch Holder'});
+  await expect(card).toBeFocused();
+  await expect(card).toBeInViewport();
 });
