@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { BufferGeometry, Float32BufferAttribute, Mesh, MeshBasicMaterial, DoubleSide, Raycaster, Vector3 } from 'three';
 
-test('both exported wafer wells have a clear coin path, solid floor and thumb access', () => {
+test('all four denomination-specific wafer wells have a clear coin path, solid floor and thumb access', () => {
   const raw = readFileSync('public/singapore-products/wafer-coin-collector/wafer-coin-collector.stl');
   const positions = [];
   for (let i = 0; i < raw.readUInt32LE(80); i++) {
@@ -17,20 +17,20 @@ test('both exported wafer wells have a clear coin path, solid floor and thumb ac
     assert.ok(hit, 'Expected to hit the exported part');
     return hit.point;
   }
-  for (const x of [-18, 18]) {
-    // Sweep down from above the rim around a disk larger than the 24.65 mm SG $1 coin.
-    for (const radius of [0, 6, 13.25]) {
+  for (const [x, coinDiameter] of [[-40, 24.65], [-11, 23], [16, 21], [40, 18.5]]) {
+    // Allow 0.39 mm per side on the faceted STL for the entire insertion path.
+    for (const radius of [0, coinDiameter / 4, coinDiameter / 2 + 0.39]) {
       for (let i = 0; i < 32; i++) {
         const angle = i * Math.PI / 16;
-        const floor = first([x + radius * Math.cos(angle), radius * Math.sin(angle), 32], [0,0,-1]);
+        const floor = first([x + radius * Math.cos(angle), -2 + radius * Math.sin(angle), 32], [0,0,-1]);
         assert.ok(Math.abs(floor.z - 3.2) < .01, 'Insertion path must reach the floor');
       }
     }
-    const width = first([x,0,15], [1,0,0]).x - first([x,0,15], [-1,0,0]).x;
-    assert.ok(Math.abs(width - 27.2) < .02);
+    const width = first([x,-2,15], [1,0,0]).x - first([x,-2,15], [-1,0,0]).x;
+    assert.ok(Math.abs(width - (coinDiameter + 0.8)) < .02);
     for (const sign of [-1,1]) {
-      assert.ok(first([x + sign * 6.9,-25,15], [0,1,0]).y > 0, 'Thumb cutout must be open');
-      assert.ok(first([x + sign * 7.1,-25,15], [0,1,0]).y < -17, 'Material must retain the stack');
+      assert.ok(first([x + sign * 5.9,-25,15], [0,1,0]).y > 0, 'Thumb cutout must be open');
+      assert.ok(first([x + sign * 6.1,-25,15], [0,1,0]).y < -17, 'Material must retain the stack');
     }
   }
 });
