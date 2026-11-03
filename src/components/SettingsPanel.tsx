@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { Settings } from 'lucide-react';
 import { PrintSettings } from '../utils/printEstimator';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Import ProfileSelector component
 import { ProfileSelector } from './settings/ProfileSelector';
@@ -74,8 +73,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onSettingsChang
   });
 
   return (
-    <div className="w-full sm:w-72 md:w-80 lg:w-80 xl:w-96 bg-gray-800 border-r border-gray-700 flex flex-col h-full">
-      {/* Fixed Header with Title and Action Buttons */}
+    <div className="h-full w-full overflow-y-auto bg-gray-800 border-r border-gray-700">
       <div className="p-2 lg:p-4 border-b border-gray-700">
         <h3 className="text-base lg:text-lg font-semibold text-white mb-2 lg:mb-4 flex items-center gap-2">
           <Settings className="w-4 h-4 lg:w-5 lg:h-5" />
@@ -97,21 +95,18 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ settings, onSettingsChang
         />
       </div>
 
-      {/* Scrollable Content Area */}
-      <ScrollArea className="flex-1">
-        <div className="p-2 lg:p-4">
-          <ProfileSelector
-            settings={settings}
-            onSettingsChange={onSettingsChange}
-            selectedQuality={selectedQuality}
-            selectedMaterial={selectedMaterial}
-            onQualityChange={setSelectedQuality}
-            onMaterialChange={setSelectedMaterial}
-            onAdvancedChange={setAdvancedSettings}
-            advancedSettings={advancedSettings}
-          />
-        </div>
-      </ScrollArea>
+      <div className="p-2 lg:p-4">
+        <ProfileSelector
+          settings={settings}
+          onSettingsChange={onSettingsChange}
+          selectedQuality={selectedQuality}
+          selectedMaterial={selectedMaterial}
+          onQualityChange={setSelectedQuality}
+          onMaterialChange={setSelectedMaterial}
+          onAdvancedChange={setAdvancedSettings}
+          advancedSettings={advancedSettings}
+        />
+      </div>
     </div>
   );
 };

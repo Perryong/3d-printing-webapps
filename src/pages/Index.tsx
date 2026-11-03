@@ -34,10 +34,13 @@ const Index = () => {
     </main>
   );
 
-  return <>
-    <Link to={collectionUrl} className="fixed bottom-5 right-5 z-50 rounded-full border border-emerald-200 bg-emerald-950 px-5 py-3 text-sm font-medium text-white shadow-lg hover:bg-emerald-900">{productId ? "Back to collection" : "Singapore collection ↗"}</Link>
-    <STLViewer key={productId} initialFile={model.data} />
-  </>;
+  return (
+    <STLViewer key={productId} initialFile={model.data} collectionLink={
+      <Link to={collectionUrl} className="rounded-lg border border-emerald-200 bg-emerald-950 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-900">
+        {productId ? "Back to collection" : "Singapore collection ↗"}
+      </Link>
+    } />
+  );
 };
 
 export default Index;

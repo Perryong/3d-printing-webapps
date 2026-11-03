@@ -71,3 +71,22 @@ test('gallery opens its product in the workspace and survives refresh', async ({
   await expect(card).toBeFocused();
   await expect(card).toBeInViewport();
 });
+
+test('settings controls stay reachable without overlapping the viewer', async ({ page }) => {
+  await page.goto('/');
+  const toggle = page.getByRole('button', { name: 'Settings', exact: true });
+  const viewer = page.getByTestId('inspection-viewer');
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  if (page.viewportSize()!.width >= 1024) {
+    const panel = await page.locator('#slicer-settings').first().locator(':scope > div').boundingBox();
+    expect(panel!.x + panel!.width).toBeLessThanOrEqual((await viewer.boundingBox())!.x);
+  } else {
+    await expect(viewer).toBeHidden();
+  }
+  await page.getByRole('button', { name: /TPU/ }).click();
+  await page.getByRole('button', { name: 'Save All Settings' }).click();
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('selectedProfiles')!).material)).toBe('TPU');
+  await toggle.click();
+  await expect(viewer).toBeInViewport();
+});

@@ -52,7 +52,7 @@ interface ModelInfo {
 
 type ViewMode = 'viewer' | 'about' | 'contact';
 
-const STLViewer: React.FC<{ initialFile?: File }> = ({ initialFile }) => {
+const STLViewer: React.FC<{ initialFile?: File; collectionLink: React.ReactNode }> = ({ initialFile, collectionLink }) => {
   const { dispatch, state } = useApp();
   
   // State
@@ -492,6 +492,7 @@ const STLViewer: React.FC<{ initialFile?: File }> = ({ initialFile }) => {
           </h1>
           
           <div className="flex flex-wrap items-center gap-2 lg:gap-4">
+            {collectionLink}
             <FileUpload 
               onFileSelect={handleFileUpload} 
               isLoading={isLoading}
@@ -502,7 +503,7 @@ const STLViewer: React.FC<{ initialFile?: File }> = ({ initialFile }) => {
             {/* View Mode Tabs */}
             <div className="flex bg-gray-700 rounded-lg p-1">
               <button
-                onClick={() => setViewMode('viewer')}
+                onClick={() => { setViewMode('viewer'); setShowSettings(false); }}
                 className={`px-2 lg:px-3 py-2 rounded-md text-xs lg:text-sm font-medium transition-colors ${
                   viewMode === 'viewer' 
                     ? 'bg-blue-600 text-white' 
@@ -542,6 +543,7 @@ const STLViewer: React.FC<{ initialFile?: File }> = ({ initialFile }) => {
                 aria-expanded={showModelControls}
                 aria-controls="model-controls"
                 onClick={() => {
+                  setShowSettings(false);
                   setShowModelControls(!showModelControls);
                   if (showModelControls) handleTransformModeChange('select');
                 }}
@@ -555,8 +557,14 @@ const STLViewer: React.FC<{ initialFile?: File }> = ({ initialFile }) => {
             {/* Settings button - only show when in viewer mode */}
             {viewMode === 'viewer' && (
               <button
+                aria-label="Settings"
+                aria-expanded={showSettings}
+                aria-controls="slicer-settings"
                 onClick={() => {
-                  console.log('Settings button clicked, current showSettings:', showSettings);
+                  if (!showSettings && showModelControls) {
+                    setShowModelControls(false);
+                    handleTransformModeChange('select');
+                  }
                   setShowSettings(!showSettings);
                 }}
                 className={`px-2 lg:px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
@@ -631,7 +639,7 @@ const STLViewer: React.FC<{ initialFile?: File }> = ({ initialFile }) => {
 
         {/* Settings panel - visible in viewer mode when showSettings is true */}
         {viewMode === 'viewer' && showSettings && (
-          <div className="flex-shrink-0 w-64">
+          <div id="slicer-settings" className="min-h-0 w-full shrink-0 lg:w-80">
             <SettingsPanel
               settings={printSettings}
               onSettingsChange={setPrintSettings}
@@ -639,7 +647,7 @@ const STLViewer: React.FC<{ initialFile?: File }> = ({ initialFile }) => {
           </div>
         )}
 
-        <div className="flex-1 flex flex-col relative min-w-0">
+        <div className={`relative min-w-0 flex-1 flex-col ${showSettings && viewMode === 'viewer' ? 'hidden lg:flex' : 'flex'}`}>
           {/* Viewer Section - Always mounted but hidden when not active */}
           <div className={`${viewMode === 'viewer' ? 'flex flex-col flex-1 min-h-0' : 'hidden'}`}>
             <details className="shrink-0 bg-gray-800 text-gray-300">
