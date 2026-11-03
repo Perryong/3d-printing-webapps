@@ -68,6 +68,25 @@ export default function SingaporeGallery() {
                   <p className="sg-dimensions">{product.dimensions}</p>
                   <h3>{product.title}</h3>
                   <p className="sg-description">{product.description}</p>
+                  {product.id === "wafer-coin-collector" && (
+                    <div className="sg-coin-fit">
+                      <table>
+                        <caption>Singapore Third Series coin fit (mm)</caption>
+                        <thead><tr><th scope="col">Coin</th><th scope="col">Diameter</th><th scope="col">Thickness</th><th scope="col">Well diameter</th></tr></thead>
+                        <tbody>
+                          {[
+                            ["$1", "24.65", "2.50", "25.45"],
+                            ["50¢", "23.00", "2.45", "23.80"],
+                            ["20¢", "21.00", "1.72", "21.80"],
+                            ["10¢", "18.50", "1.38", "19.30"],
+                          ].map(([coin, diameter, thickness, well]) => (
+                            <tr key={coin}><th scope="row">{coin}</th><td>{diameter}</td><td>{thickness}</td><td>{well}</td></tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      <a href="https://www.mas.gov.sg/currency/circulation-currency/circulation-currency-coins">MAS coin specifications · 2013 series</a>
+                    </div>
+                  )}
                   <p className="sg-print-note">{product.printNote}</p>
                   <div className="sg-downloads">
                     {product.stl ? <a href={product.stl} download className="sg-stl" aria-label={`Download ${product.title} STL file`}><Download size={15} /> STL file</a> : <span className="sg-concept-note">Visual concept · no print file</span>}

@@ -308,3 +308,10 @@
   padding-left:20px;
   padding-right:20px}
 }
+
+.sg-coin-fit { margin: 1rem 0; font-size: .83rem; }
+.sg-coin-fit table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.sg-coin-fit caption { text-align: left; font-weight: 650; padding-bottom: .4rem; }
+.sg-coin-fit th, .sg-coin-fit td { padding: .35rem .15rem; text-align: right; border-bottom: 1px solid #d8ddd2; }
+.sg-coin-fit th:first-child { text-align: left; }
+.sg-coin-fit a { display: inline-block; margin-top: .45rem; text-decoration: underline; }
