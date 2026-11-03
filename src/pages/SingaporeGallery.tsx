@@ -48,13 +48,13 @@ export default function SingaporeGallery() {
           </div>
           <aside className="sg-edition" aria-label="Collection details">
             <Box size={34} strokeWidth={1.2} />
-            <span className="sg-edition-number">08</span>
+            <span className="sg-edition-number">{products.length ? String(products.length).padStart(2, "0") : "—"}</span>
             <p>local ideas.<br />a new dimension.</p>
-            <div><span>07 print prototypes</span><span>01 visual concept</span></div>
+            <div><span>Printable desk objects &amp; souvenirs</span></div>
           </aside>
         </section>
 
-        <div className="sg-update"><span>Freshly reworked</span><p>Lapis Bloom · Tutu Keychain</p></div>
+        <div className="sg-update"><span>Freshly reworked</span><p>{products.filter(p => p.updated).map(p => p.title).join(" · ")}</p></div>
 
         <section id="collection" aria-labelledby="collection-title">
           <div className="sg-section-heading"><h2 id="collection-title">The collection</h2><p>Drag to rotate · scroll to zoom · download to make</p></div>

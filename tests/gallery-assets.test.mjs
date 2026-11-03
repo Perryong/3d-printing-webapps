@@ -3,13 +3,13 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-test('gallery ships eight current designs with usable local previews and seven valid STL downloads', () => {
+test('gallery ships seven current designs with usable local previews and seven valid STL downloads', () => {
   const manifest = resolve('public/singapore-products/catalog.json');
   assert.ok(existsSync(manifest), 'Gallery catalog is not generated yet');
   const products = JSON.parse(readFileSync(manifest, 'utf8'));
-  assert.equal(products.length, 8);
-  assert.equal(new Set(products.map(p => p.id)).size, 8);
-  assert.deepEqual(products.map(p => p.id), ['lapis-bloom', 'tutu-keychain', 'chope-marker', 'hdb-pencil-pot', 'kopi-clip-cup', 'peranakan-coaster', 'wafer-card-stand', 'kaya-reveal-concept']);
+  assert.equal(products.length, 7);
+  assert.equal(new Set(products.map(p => p.id)).size, 7);
+  assert.deepEqual(products.map(p => p.id), ['wafer-coin-collector', 'lapis-bloom', 'tutu-keychain', 'chope-marker', 'hdb-pencil-pot', 'kopi-clip-cup', 'peranakan-coaster']);
   assert.ok(products.some(p => p.id === 'tutu-keychain'));
   assert.ok(!products.some(p => /dragon|lapis-stack|tutu-touch/.test(p.id)));
   const prints = products.filter(p => p.stl);
