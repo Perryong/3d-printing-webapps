@@ -88,6 +88,12 @@ export default function SingaporeGallery() {
                     </div>
                   )}
                   <p className="sg-print-note">{product.printNote}</p>
+                  {product.stl && (
+                    <Link className="sg-open-model" to={`/?product=${encodeURIComponent(product.id)}`}
+                      aria-label={`Open ${product.title} in print workspace`}>
+                      Open in print workspace <ArrowUpRight size={16} />
+                    </Link>
+                  )}
                   <div className="sg-downloads">
                     {product.stl ? <a href={product.stl} download className="sg-stl" aria-label={`Download ${product.title} STL file`}><Download size={15} /> STL file</a> : <span className="sg-concept-note">Visual concept · no print file</span>}
                     <a href={product.blend} download aria-label={`Download ${product.title} Blender file`}>Blender <ArrowDown size={13} /></a>

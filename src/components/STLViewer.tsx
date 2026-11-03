@@ -52,7 +52,7 @@ interface ModelInfo {
 
 type ViewMode = 'viewer' | 'about' | 'contact';
 
-const STLViewer: React.FC = () => {
+const STLViewer: React.FC<{ initialFile?: File }> = ({ initialFile }) => {
   const { dispatch, state } = useApp();
   
   // State
@@ -214,6 +214,14 @@ const STLViewer: React.FC = () => {
       setIsLoading(false);
     }
   }, [printSettings, dispatch, gridVisible]);
+
+  const openedFile = useRef<File>();
+  useEffect(() => {
+    if (initialFile && openedFile.current !== initialFile) {
+      openedFile.current = initialFile;
+      void loadSTLFile(initialFile);
+    }
+  }, [initialFile, loadSTLFile]);
 
   // Handle G-code file upload
   const handleGCodeUpload = useCallback(async (file: File) => {

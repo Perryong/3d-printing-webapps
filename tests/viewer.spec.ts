@@ -56,3 +56,13 @@ test('dropping a collection STL on the workspace opens its 3D preview', async ({
   await expect(page.getByRole('combobox', {name: 'Selected file'}).locator('option:checked')).toHaveText('dragon-holder.stl');
   await expect(page.locator('.viewer-dimension').filter({hasText:'W 113.00 mm'})).toBeVisible();
 });
+
+test('gallery opens its product in the workspace and survives refresh', async ({page}) => {
+  await page.goto('/singapore-gallery');
+  await page.getByRole('link', {name:'Open Dragon Playground Watch Holder in print workspace'}).click();
+  const width = page.locator('.viewer-dimension').filter({hasText:'W 113.00 mm'});
+  await expect(width).toBeVisible();
+  await page.reload();
+  await expect(width).toBeVisible();
+  await expect(page.getByRole('combobox',{name:'Selected file'}).locator('option:checked')).toHaveText('dragon-playground-watch-holder.stl');
+});
