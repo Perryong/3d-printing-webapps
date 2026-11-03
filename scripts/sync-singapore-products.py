@@ -4,13 +4,13 @@ from pathlib import Path
 source = Path(sys.argv[1]).resolve()
 target = Path(__file__).resolve().parents[1] / 'public' / 'singapore-products'
 target.mkdir(parents=True, exist_ok=True)
-order = ['wafer-coin-collector', 'lapis-bloom', 'tutu-keychain', 'chope-marker', 'hdb-pencil-pot', 'kopi-clip-cup', 'peranakan-coaster']
+order = ['wafer-coin-collector', 'lapis-bloom', 'tutu-keychain', 'chope-marker', 'hdb-pencil-pot', 'dragon-playground-watch-holder', 'peranakan-coaster']
 copy = {
  'lapis-bloom': ('Lapis Bloom', 'Seven layers of kueh, shaped into a scalloped flower. Grooved bands and a raised floral top make this a little desk keepsake.', 'Flat-back print · swap colours at 2.2, 4.4, 6.6, 8.8, 11 and 13.2 mm.'),
  'tutu-keychain': ('Tutu Keychain', 'A tiny scalloped kueh on its green leaf, now with a reinforced eyelet to carry a little Singapore everywhere.', 'Flat-back print · green to white at 3 mm. Add a metal keyring; strength and fit untested.'),
  'chope-marker': ('CHOPE Desk Marker', 'The familiar tissue packet, made into a playful desk marker inspired by Singapore’s seat-reserving custom.', 'Flat-back print · coral to white at 10 mm for a simple two-colour finish.'),
  'hdb-pencil-pot': ('HDB Block Pencil Pot', 'A miniature neighbourhood for your pencils. Recessed windows and a BLK 01 sign turn a small tower into a familiar home.', 'Upright print · 50 × 26 mm opening with a 4 mm floor.'),
- 'kopi-clip-cup': ('Kopitiam Paperclip Cup', 'A little kopi cup and saucer to catch the small things on your desk. A nod to the everyday coffee break.', 'Base-down print · 11 mm deep well; for desk storage, not drinks.'),
+ 'dragon-playground-watch-holder': ('Dragon Playground Watch Holder', 'An orange mosaic dragon and colourful climbing hoops flank a curved saddle for your wristwatch. The watch in the photo illustrates how to use the stand.', 'Both the STL and Blender file contain only the holder. Print base down at 100% scale and preview supports under the saddle, snout and hoops. Physical fit is untested.'),
  'peranakan-coaster': ('Peranakan Tile Coaster', 'An original floral pattern inspired by the decorative tiles of Singapore’s shophouses, in blue and warm ivory.', 'Flat-back print · colour change at 4 mm; heat and stability untested.'),
  'wafer-coin-collector': ('Ice Cream Wafer Coin Collector', 'A raspberry ice cream sandwich that holds your spare change. Sort $1, 50c, 20c and 10c coins into four labelled stacks and lift them out through the front cutouts.', 'Each well allows 0.40 mm clearance per side. Print base down at 100% scale. Optional colour changes at 4.4 and 25.6 mm. Coin fit has not been physically tested.'),
 }
@@ -25,7 +25,7 @@ for slug in order:
     folder.mkdir(exist_ok=True)
     title, description, note = copy[slug]
     item = dict(id=slug, title=title, description=description, printNote=note,
-                dimensions=p['dimensions'], status=p['status'], updated=slug in order[:3])
+                dimensions=p['dimensions'], status=p['status'], updated=slug in order[:3] or slug == 'dragon-playground-watch-holder')
     for kind in ['stl', 'blend', 'preview']:
         if kind in p:
             src=Path(p[kind]);dest=folder/(slug+src.suffix)
