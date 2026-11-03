@@ -44,7 +44,7 @@ export default function SingaporeGallery() {
             <p className="sg-eyebrow">A collection of everyday Singapore</p>
             <h1 id="gallery-title">Small objects.<br /><em>Very Singapore.</em></h1>
             <p className="sg-lead">Kueh, kopitiams and familiar neighbourhood icons. Little pieces of home, reimagined for your desk — and your keyring.</p>
-            <a href="#collection" className="sg-explore">Explore in 3D <ArrowDown size={17} /></a>
+            <a href="#collection" className="sg-explore">Explore in 3D Printing <ArrowDown size={17} /></a>
           </div>
           <aside className="sg-edition" aria-label="Collection details">
             <Box size={34} strokeWidth={1.2} />
