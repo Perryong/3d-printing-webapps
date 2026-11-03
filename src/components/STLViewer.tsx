@@ -205,10 +205,7 @@ const STLViewer: React.FC = () => {
         volume: volumeCm3.toFixed(2)
       });
       
-      if (slicingMethod === 'simplified') {
-        const timeEstimate = estimatePrintTime(geometry, printSettings);
-        setPrintTimeEstimate(timeEstimate);
-      }
+      setPrintTimeEstimate(estimatePrintTime(geometry, printSettings));
       geometry.dispose();
     } catch (err) {
       setCheckoutFile(null); setSelectedModelId(null);
@@ -216,7 +213,7 @@ const STLViewer: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [printSettings, slicingMethod, dispatch, gridVisible]);
+  }, [printSettings, dispatch, gridVisible]);
 
   // Handle G-code file upload
   const handleGCodeUpload = useCallback(async (file: File) => {
@@ -245,13 +242,14 @@ const STLViewer: React.FC = () => {
   }, [dispatch]);
 
   // Handle file upload
-  const handleFileUpload = useCallback((file: File) => {
+  const handleFileUpload = useCallback(async (file: File) => {
+    setViewMode('viewer');
     const fileName = file.name.toLowerCase();
     if (fileName.endsWith('.stl')) {
       setSlicingMethod('simplified');
-      loadSTLFile(file);
+      await loadSTLFile(file);
     } else if (fileName.endsWith('.gcode') || fileName.endsWith('.g')) {
-      handleGCodeUpload(file);
+      await handleGCodeUpload(file);
     } else {
       setError('Please select a valid STL or G-code file');
     }
@@ -462,7 +460,20 @@ const STLViewer: React.FC = () => {
   const uploadError = currentFile?.uploadError;
 
   return (
-    <div className="w-full h-dvh bg-gray-900 flex flex-col overflow-hidden">
+    <div className="w-full h-dvh bg-gray-900 flex flex-col overflow-hidden"
+      onDragOver={event => {
+        if (!event.dataTransfer.types.includes('Files')) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = isLoading || isUploading ? 'none' : 'copy';
+      }}
+      onDrop={async event => {
+        if (!event.dataTransfer.types.includes('Files')) return;
+        event.preventDefault();
+        if (isLoading || isUploading) return;
+        const files = Array.from(event.dataTransfer.files);
+        for (const file of files) await handleFileUpload(file);
+      }}
+    >
       {/* Header */}
       <div className="bg-gray-800 p-4 border-b border-gray-700">
         <div className="flex flex-wrap items-center justify-between gap-2">

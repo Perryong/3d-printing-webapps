@@ -69,8 +69,8 @@ const ViewerDisplay: React.FC<ViewerDisplayProps> = ({
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="text-center text-gray-400 max-w-md">
             <Move3D className="w-16 h-16 mx-auto mb-4 text-gray-600" />
-            <h2 className="text-xl font-semibold mb-2">Upload STL or G-code File</h2>
-            <p className="mb-4">Load a 3D model file for viewing and print time estimation</p>
+            <h2 className="text-xl font-semibold mb-2">Drop an STL to view it in 3D</h2>
+            <p className="mb-4">Drag a file here or choose Upload File.</p>
             <div className="text-sm space-y-2">
               <p><strong>STL Files:</strong> 3D model visualization + estimated print time</p>
               <p><strong>G-code Files:</strong> Approximate analysis — owner slicing confirmation required</p>

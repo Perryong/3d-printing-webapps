@@ -39,3 +39,20 @@ test('inspection modes, dimensions, files, fullscreen and invalid STL', async ({
   await page.getByRole('button',{name:'About',exact:true}).click();
   await expect(page.getByRole('heading',{name:'Senior AI Engineer',exact:true})).toBeVisible();
 });
+
+test('dropping a collection STL on the workspace opens its 3D preview', async ({page}) => {
+  await page.goto('/');
+  const filePath = '/singapore-products/dragon-playground-watch-holder/dragon-playground-watch-holder.stl';
+  const transfer = await page.evaluateHandle(async path => {
+    const response = await fetch(path);
+    if (!response.ok) throw Error('Missing STL fixture');
+    const data = new DataTransfer();
+    data.items.add(new File([await response.blob()], 'dragon-holder.stl'));
+    return data;
+  }, filePath);
+  const target = page.getByRole('heading', {name: 'Drop an STL to view it in 3D'});
+  await target.dispatchEvent('dragover', {dataTransfer: transfer});
+  await target.dispatchEvent('drop', {dataTransfer: transfer});
+  await expect(page.getByRole('combobox', {name: 'Selected file'}).locator('option:checked')).toHaveText('dragon-holder.stl');
+  await expect(page.locator('.viewer-dimension').filter({hasText:'W 113.00 mm'})).toBeVisible();
+});
