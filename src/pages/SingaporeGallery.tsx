@@ -116,7 +116,12 @@ export default function SingaporeGallery() {
 
         <section className="sg-making" aria-labelledby="making-title">
           <div><p className="sg-eyebrow">From screen to desk</p><h2 id="making-title">Made to start simple.</h2></div>
-          <div><h3>For your Bambu Lab A1 Combo</h3><p>Import the STL at 100% scale in millimetres. Start with PLA, a 0.4 mm nozzle and 0.2 mm layers, then inspect the sliced preview. The Blender files preserve the colour illustrations; STL files contain geometry only.</p><p>These are adult desk objects and souvenir prototypes. Meshes have been checked, but physical prints, keyring strength and fit still need testing. Colour changes are suggestions, not a preconfigured AMS print job.</p></div>
+          <div>
+            <h3>Print on your Bambu Lab A1 Combo</h3>
+            <p>Open the STL in millimetres at 100% scale. Start with PLA, a 0.4 mm nozzle and 0.2 mm layers. Preview before printing.</p>
+            <p>For a colour print, use the Blender file as a guide and choose your colours in Bambu Studio.</p>
+            <p>These prototypes are for adults. Make a test print to check the fit and keyring strength.</p>
+          </div>
         </section>
       </main>
       <footer className="sg-footer"><span>Designed around the things we recognise.</span><Link to="/">Open print workspace <ArrowUpRight size={15} /></Link></footer>
