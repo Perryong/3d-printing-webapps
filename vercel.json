@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/singapore-gallery", "destination": "/index.html" },
     { "source": "/owner", "destination": "/index.html" },
     { "source": "/receipt-demo", "destination": "/index.html" }
   ]

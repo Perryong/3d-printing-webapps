@@ -9,6 +9,7 @@ import { AppProvider } from "./context/AppContext";
 import Index from "./pages/Index";
 import Owner from './pages/Owner';
 import NotFound from "./pages/NotFound";
+import SingaporeGallery from "./pages/SingaporeGallery";
 
 const ReceiptDemo = lazy(() => import("./pages/ReceiptDemo"));
 
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/receipt-demo" element={<Suspense fallback={<p>Loading preview…</p>}><ReceiptDemo /></Suspense>} />
             <Route path="/owner" element={<Owner />} />
+            <Route path="/singapore-gallery" element={<SingaporeGallery />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
