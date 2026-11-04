@@ -13,6 +13,8 @@ interface Product {
   preview: string;
   blend: string;
   stl?: string;
+  threemf?: string;
+  stlParts?: string;
   updated: boolean;
   printNote: string;
 }
@@ -104,7 +106,9 @@ export default function SingaporeGallery() {
                     </Link>
                   )}
                   <div className="sg-downloads">
-                    {product.stl ? <a href={product.stl} download className="sg-stl" aria-label={`Download ${product.title} STL file`}><Download size={15} /> STL file</a> : <span className="sg-concept-note">Visual concept · no print file</span>}
+                    {product.threemf && <a href={product.threemf} download className="sg-stl" aria-label={`Download ${product.title} multipart 3MF`}><Download size={15} /> Colour parts · 3MF</a>}
+                    {product.stlParts && <a href={product.stlParts} download aria-label={`Download ${product.title} separate STL parts`}>STL parts · ZIP <Download size={15} /></a>}
+                    {product.stl ? <a href={product.stl} download className="sg-stl" aria-label={`Download ${product.title} STL file`}><Download size={15} /> {product.stlParts ? "Single STL" : "STL file"}</a> : <span className="sg-concept-note">Visual concept · no print file</span>}
                     <a href={product.blend} download aria-label={`Download ${product.title} Blender file`}>Blender <ArrowDown size={13} /></a>
                     <a href={product.preview} target="_blank" rel="noreferrer" aria-label={`View rendered image of ${product.title}`}><ArrowUpRight size={16} /><span className="sr-only">Rendered image</span></a>
                   </div>

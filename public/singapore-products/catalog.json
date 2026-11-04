@@ -42,14 +42,16 @@
     "id": "chope-marker",
     "title": "CHOPE Desk Marker",
     "description": "The familiar tissue packet, made into a playful desk marker inspired by Singapore’s seat-reserving custom.",
-    "printNote": "Flat-back print · coral to white at 10 mm for a simple two-colour finish.",
+    "printNote": "For separate colours, open the 3MF in Bambu Studio and assign filaments to Packet body, CHOPE lettering and Tissue in the Objects list. For the STL parts ZIP, import all three files together as one object with multiple parts to keep them aligned.",
     "dimensions": "60 × 38 × 12 mm",
     "status": "Printable prototype",
-    "updated": false,
+    "updated": true,
     "stl": "/singapore-products/chope-marker/chope-marker.stl",
     "blend": "/singapore-products/chope-marker/chope-marker.blend",
     "preview": "/singapore-products/chope-marker/chope-marker.png",
-    "viewer": "/singapore-products/chope-marker/viewer.html"
+    "viewer": "/singapore-products/chope-marker/viewer.html",
+    "threemf": "/singapore-products/chope-marker/chope-multipart.3mf",
+    "stlParts": "/singapore-products/chope-marker/chope-stl-parts.zip"
   },
   {
     "id": "hdb-pencil-pot",
