@@ -28,7 +28,10 @@ solid = m.Manifold.batch_boolean(solids, m.OpType.Add).simplify(0.006)
 assert solid.status() == m.Error.NoError
 print([(s.volume(), s.num_tri()) for s in solid.decompose()])
 pieces = sorted(solid.decompose(), key=lambda s: s.volume(), reverse=True)
-assert all(p.volume() < 0.3 for p in pieces[1:])
+# Clipped mosaic corners can leave sub-millimetre islands outside the bevel.
+# Omit only these tiny fragments; a detached functional part must fail export.
+assert all(p.volume() < 0.5 for p in pieces[1:])
+assert sum(p.volume() for p in pieces[1:]) < 1.0
 solid = pieces[0]
 assert len(solid.decompose()) == 1
 mesh = solid.to_mesh()

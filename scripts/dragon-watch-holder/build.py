@@ -14,6 +14,8 @@ sc = bpy.context.scene
 sc.unit_settings.system = "METRIC"
 sc.unit_settings.scale_length = 0.001
 
+HEIGHT_INCREASE_MM = 9
+
 
 def mat(n, c):
     m = bpy.data.materials.new(n)
@@ -102,6 +104,7 @@ outline = [
     (-46, 38),
     (-44, 31),
 ]
+outline = [(x, z if z == 5 else z + HEIGHT_INCREASE_MM) for x, z in outline]
 silhouette("Mosaic dragon profile", outline, -26, 17, grout, 0.7)
 
 
@@ -150,9 +153,9 @@ def eye(n, x, y, z, r, depth, m):
     bevel(o, 0.18)
 
 
-eye("Eye surround", -45, -27, 52, 4.9, 1.4, cream)
-eye("Eye", -46, -27.9, 52.1, 2.85, 1.2, teal)
-eye("Nostril", -64, -26.9, 50, 1.15, 1, grout)
+eye("Eye surround", -45, -27, 52 + HEIGHT_INCREASE_MM, 4.9, 1.4, cream)
+eye("Eye", -46, -27.9, 52.1 + HEIGHT_INCREASE_MM, 2.85, 1.2, teal)
+eye("Nostril", -64, -26.9, 50 + HEIGHT_INCREASE_MM, 1.15, 1, grout)
 
 
 def rod(n, a, b, r, m):
@@ -170,21 +173,28 @@ def rod(n, a, b, r, m):
 
 
 for y, z in [(-28, 27), (-16, 27), (-22, 42)]:
+    z += HEIGHT_INCREASE_MM
     rod("Tunnel spine", (-37, y, z), (-14, y, z), 1.25, teal)
 for x, m in [(-28, red), (-23, yellow), (-18, blue)]:
     bpy.ops.mesh.primitive_torus_add(
         major_radius=8.4,
         minor_radius=1.5,
-        location=(x, -22, 34),
+        location=(x, -22, 34 + HEIGHT_INCREASE_MM),
         rotation=(0, pi / 2, 0),
     )
     bpy.context.object.name = "Playground climbing hoop"
     bpy.context.object.data.materials.append(m)
-box("Body support", (-16, -22, 19), (6, 8, 29), orange, 2)
-box("Saddle arm", (-2, -22, 34), (31, 7, 7), orange, 1.4)
-box("Saddle rib", (12, -9.5, 34), (9, 25, 7), orange, 1.2)
+box(
+    "Body support",
+    (-16, -22, 19 + HEIGHT_INCREASE_MM / 2),
+    (6, 8, 29 + HEIGHT_INCREASE_MM),
+    orange,
+    2,
+)
+box("Saddle arm", (-2, -22, 34 + HEIGHT_INCREASE_MM), (31, 7, 7), orange, 1.4)
+box("Saddle rib", (12, -9.5, 34 + HEIGHT_INCREASE_MM), (9, 25, 7), orange, 1.2)
 cy = -22
-cz = 34
+cz = 34 + HEIGHT_INCREASE_MM
 
 
 def cuff(name, width, ry, rz, th, a, b, material):
