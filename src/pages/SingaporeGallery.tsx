@@ -15,6 +15,8 @@ interface Product {
   stl?: string;
   threemf?: string;
   stlParts?: string;
+  watchFit?: [string, string][];
+  sizingImage?: string;
   updated: boolean;
   printNote: string;
 }
@@ -79,6 +81,19 @@ export default function SingaporeGallery() {
                   <p className="sg-dimensions">{product.dimensions}</p>
                   <h3 id={`title-${product.id}`}>{product.title}</h3>
                   <p className="sg-description">{product.description}</p>
+                  {product.watchFit && (
+                    <div className="sg-coin-fit">
+                      <table>
+                        <caption>Proposed watch fit</caption>
+                        <tbody>
+                          {product.watchFit.map(([label, value]) => (
+                            <tr key={label}><th scope="row">{label}</th><td>{value}</td></tr>
+                          ))}
+                        </tbody>
+                      </table>
+                      {product.sizingImage && <a href={product.sizingImage} target="_blank" rel="noreferrer">View sizing illustration</a>}
+                    </div>
+                  )}
                   {product.id === "wafer-coin-collector" && (
                     <div className="sg-coin-fit">
                       <table>

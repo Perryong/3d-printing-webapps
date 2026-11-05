@@ -69,15 +69,50 @@
   {
     "id": "dragon-playground-watch-holder",
     "title": "Dragon Playground Watch Holder",
-    "description": "An orange mosaic dragon and colourful climbing hoops flank a curved saddle for your wristwatch. The watch in the photo illustrates how to use the stand.",
-    "printNote": "Both the STL and Blender file contain only the holder. Print base down at 100% scale and preview supports under the saddle, snout and hoops. Physical fit is untested.",
+    "description": "An orange mosaic dragon and colourful climbing hoops frame a medium watch support, sized for 36–46 mm watch cases and 18–24 mm straps. The example watch and soft padding are shown for illustration.",
+    "printNote": "Proposed fit; test with your watch, especially a fitted metal bracelet. Add 1 mm felt or soft rubber to protect the watch. STL and Blender downloads contain the holder only. Print at 100% scale and check supports under the saddle, snout and hoops.",
     "dimensions": "113 × 65 × 66 mm",
     "status": "Printable prototype",
     "updated": true,
     "stl": "/singapore-products/dragon-playground-watch-holder/dragon-playground-watch-holder.stl",
     "blend": "/singapore-products/dragon-playground-watch-holder/dragon-playground-watch-holder.blend",
     "preview": "/singapore-products/dragon-playground-watch-holder/dragon-playground-watch-holder.png",
-    "viewer": "/singapore-products/dragon-playground-watch-holder/viewer.html"
+    "viewer": "/singapore-products/dragon-playground-watch-holder/viewer.html",
+    "watchFit": [
+      [
+        "Watch case diameter",
+        "36–46 mm"
+      ],
+      [
+        "Strap width",
+        "18–24 mm"
+      ],
+      [
+        "Case length (lug-to-lug)",
+        "Up to 52 mm"
+      ],
+      [
+        "Case thickness",
+        "Up to 15 mm"
+      ],
+      [
+        "Support width",
+        "22 mm"
+      ],
+      [
+        "Nominal oval (depth × height)",
+        "54 × 44 mm"
+      ],
+      [
+        "Support wall",
+        "4 mm"
+      ],
+      [
+        "Optional soft padding",
+        "1 mm"
+      ]
+    ],
+    "sizingImage": "/singapore-products/dragon-playground-watch-holder/watch-sizing.png"
   },
   {
     "id": "peranakan-coaster",

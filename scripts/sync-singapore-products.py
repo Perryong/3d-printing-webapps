@@ -10,7 +10,7 @@ copy = {
  'tutu-keychain': ('Tutu Keychain', 'A tiny scalloped kueh on its green leaf, now with a reinforced eyelet to carry a little Singapore everywhere.', 'Flat-back print · green to white at 3 mm. Add a metal keyring; strength and fit untested.'),
  'chope-marker': ('CHOPE Desk Marker', 'The familiar tissue packet, made into a playful desk marker inspired by Singapore’s seat-reserving custom.', 'For separate colours, open the 3MF in Bambu Studio and assign filaments to Packet body, CHOPE lettering and Tissue in the Objects list. For the STL parts ZIP, import all three files together as one object with multiple parts to keep them aligned.'),
  'hdb-pencil-pot': ('HDB Block Pencil Pot', 'A miniature neighbourhood for your pencils. Recessed windows and a BLK 01 sign turn a small tower into a familiar home.', 'Upright print · 50 × 26 mm opening with a 4 mm floor.'),
- 'dragon-playground-watch-holder': ('Dragon Playground Watch Holder', 'An orange mosaic dragon and colourful climbing hoops flank a curved saddle for your wristwatch. The watch in the photo illustrates how to use the stand.', 'Both the STL and Blender file contain only the holder. Print base down at 100% scale and preview supports under the saddle, snout and hoops. Physical fit is untested.'),
+ 'dragon-playground-watch-holder': ('Dragon Playground Watch Holder', 'An orange mosaic dragon and colourful climbing hoops frame a medium watch support, sized for 36–46 mm watch cases and 18–24 mm straps. The example watch and soft padding are shown for illustration.', 'Proposed fit; test with your watch, especially a fitted metal bracelet. Add 1 mm felt or soft rubber to protect the watch. STL and Blender downloads contain the holder only. Print at 100% scale and check supports under the saddle, snout and hoops.'),
  'peranakan-coaster': ('Peranakan Tile Coaster', 'An original floral pattern inspired by the decorative tiles of Singapore’s shophouses, in blue and warm ivory.', 'Flat-back print · colour change at 4 mm; heat and stability untested.'),
  'wafer-coin-collector': ('Ice Cream Wafer Coin Collector', 'A raspberry ice cream sandwich that holds your spare change. Sort $1, 50c, 20c and 10c coins into four labelled stacks and lift them out through the front cutouts.', 'Each well allows 0.40 mm clearance per side. Print base down at 100% scale. Optional colour changes at 4.4 and 25.6 mm. Coin fit has not been physically tested.'),
 }
@@ -41,6 +41,9 @@ for slug in order:
             stlParts='/singapore-products/chope-marker/chope-stl-parts.zip',
             updated=True,
         )
+    if slug == 'dragon-playground-watch-holder':
+        item['watchFit'] = [['Watch case diameter', '36–46 mm'], ['Strap width', '18–24 mm'], ['Case length (lug-to-lug)', 'Up to 52 mm'], ['Case thickness', 'Up to 15 mm'], ['Support width', '22 mm'], ['Nominal oval (depth × height)', '54 × 44 mm'], ['Support wall', '4 mm'], ['Optional soft padding', '1 mm']]
+        item['sizingImage'] = '/singapore-products/dragon-playground-watch-holder/watch-sizing.png'
     catalog.append(item)
 (target/'catalog.json').write_text(json.dumps(catalog,indent=2,ensure_ascii=False)+'\n')
 print('Synced',len(catalog),'products to',target)
