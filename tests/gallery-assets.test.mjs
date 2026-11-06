@@ -9,13 +9,13 @@ test('gallery ships seven current designs with usable local previews and seven v
   const products = JSON.parse(readFileSync(manifest, 'utf8'));
   assert.equal(products.length, 7);
   assert.equal(new Set(products.map(p => p.id)).size, 7);
-  assert.deepEqual(products.map(p => p.id), ['wafer-coin-collector', 'lapis-bloom', 'tutu-keychain', 'chope-marker', 'hdb-pencil-pot', 'dragon-playground-watch-holder', 'peranakan-coaster']);
+  assert.deepEqual(products.map(p => p.id), ['wafer-coin-collector', 'kopitiam-keycap-clicker', 'tutu-keychain', 'chope-marker', 'hdb-pencil-pot', 'dragon-playground-watch-holder', 'peranakan-coaster']);
   assert.ok(products.some(p => p.id === 'tutu-keychain'));
-  assert.ok(!products.some(p => /dragon-cable-rest|kopi-clip-cup|lapis-stack|tutu-touch/.test(p.id)));
+  assert.ok(!products.some(p => /dragon-cable-rest|kopi-clip-cup|lapis-stack|lapis-bloom|tutu-touch/.test(p.id)));
   const prints = products.filter(p => p.stl);
   assert.equal(prints.length, 7);
   for (const product of products) {
-    for (const asset of [product.viewer, product.preview, product.blend, product.stl].filter(Boolean)) {
+    for (const asset of [product.viewer, product.preview, product.blend, product.stl, product.stlParts].filter(Boolean)) {
       assert.ok(asset.startsWith('/singapore-products/'), asset);
       assert.ok(existsSync(resolve('public', '.' + asset)), asset);
     }

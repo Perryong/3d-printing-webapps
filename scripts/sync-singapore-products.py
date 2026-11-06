@@ -4,9 +4,8 @@ from pathlib import Path
 source = Path(sys.argv[1]).resolve()
 target = Path(__file__).resolve().parents[1] / 'public' / 'singapore-products'
 target.mkdir(parents=True, exist_ok=True)
-order = ['wafer-coin-collector', 'lapis-bloom', 'tutu-keychain', 'chope-marker', 'hdb-pencil-pot', 'dragon-playground-watch-holder', 'peranakan-coaster']
+order = ['wafer-coin-collector', 'kopitiam-keycap-clicker', 'tutu-keychain', 'chope-marker', 'hdb-pencil-pot', 'dragon-playground-watch-holder', 'peranakan-coaster']
 copy = {
- 'lapis-bloom': ('Lapis Bloom', 'Seven layers of kueh, shaped into a scalloped flower. Grooved bands and a raised floral top make this a little desk keepsake.', 'Flat-back print · swap colours at 2.2, 4.4, 6.6, 8.8, 11 and 13.2 mm.'),
  'tutu-keychain': ('Tutu Keychain', 'A tiny scalloped kueh on its green leaf, now with a reinforced eyelet to carry a little Singapore everywhere.', 'Flat-back print · green to white at 3 mm. Add a metal keyring; strength and fit untested.'),
  'chope-marker': ('CHOPE Desk Marker', 'The familiar tissue packet, made into a playful desk marker inspired by Singapore’s seat-reserving custom.', 'For separate colours, open the 3MF in Bambu Studio and assign filaments to Packet body, CHOPE lettering and Tissue in the Objects list. For the STL parts ZIP, import all three files together as one object with multiple parts to keep them aligned.'),
  'hdb-pencil-pot': ('HDB Block Pencil Pot', 'A miniature neighbourhood for your pencils. Recessed windows and a BLK 01 sign turn a small tower into a familiar home.', 'Upright print · 50 × 26 mm opening with a 4 mm floor.'),
@@ -17,9 +16,15 @@ copy = {
 styles = '''<style>:root{--font-size-base:12px;--foreground:#253b35;--muted-foreground:#748071}*{box-sizing:border-box}body{margin:0;background:#fdfbf6;color:#253b35;font:11px/1.5 Arial,sans-serif}.btn{font:inherit;color:#405749;border:1px solid #d8ddd2;border-radius:5px;background:#f8f7f0;padding:6px 9px;cursor:pointer;min-height:32px}.btn:hover{background:#e8eddf}.btn:focus-visible{outline:2px solid #ad4939;outline-offset:2px}.text-small{font-size:10px}@media(pointer:coarse){.btn{min-height:44px}}@media(max-width:350px){.btn{padding:6px}}
 </style>'''
 products = {p['id']: p for p in json.loads((source / 'gallery-assets.json').read_text())}
-assert set(order) == set(products), 'Seven current designs required'
+clicker = json.loads((Path(__file__).parent / 'kopitiam-clicker' / 'product.json').read_text())
+assert set(order) - {clicker['id']} <= products.keys(), 'Missing gallery exports'
 catalog = []
 for slug in order:
+    if slug == clicker['id']:
+        for key in ('stl', 'blend', 'preview', 'viewer', 'stlParts'):
+            assert (target.parent / clicker[key].lstrip('/')).is_file(), clicker[key]
+        catalog.append(clicker)
+        continue
     p = products[slug]
     folder = target / slug
     folder.mkdir(exist_ok=True)
