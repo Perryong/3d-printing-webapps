@@ -16,7 +16,7 @@
     "id": "kopitiam-keycap-clicker",
     "title": "Kopitiam Keycap Clicker",
     "description": "Press a red-dot pau or a green-striped kopi cup. Both caps fit the same jade saucer keychain, inspired by a Singapore kopitiam breakfast.",
-    "printNote": "Add one full-height MX-style clicky switch and a metal split ring. Print the base and your choice of cap at 100% scale. Clip the switch into the square opening, press the cap onto its stem, then attach the ring. Switch fit and keyring strength need a test print.",
+    "printNote": "Open the colour 3MF as a project in Bambu Studio. Under Objects → Red-dot pau, Pau dough uses filament 1 (cream) and Red dot uses filament 2 (red). Match the colours to your AMS Lite spools. Print the saucer and either cap, then fit one full-height MX-style clicky switch and a split ring. Test the fit before use.",
     "dimensions": "40.4 × 36 mm base · approx. 34 mm tall with pau",
     "status": "Printable prototype",
     "updated": true,
@@ -25,7 +25,8 @@
     "blend": "/singapore-products/kopitiam-keycap-clicker/kopitiam-keycap-clicker.blend",
     "preview": "/singapore-products/kopitiam-keycap-clicker/kopitiam-keycap-clicker.png",
     "viewer": "/singapore-products/kopitiam-keycap-clicker/viewer.html",
-    "stlParts": "/singapore-products/kopitiam-keycap-clicker/clicker-stl-parts.zip"
+    "stlParts": "/singapore-products/kopitiam-keycap-clicker/clicker-stl-parts.zip",
+    "threemf": "/singapore-products/kopitiam-keycap-clicker/kopitiam-keycap-clicker.3mf"
   },
   {
     "id": "tutu-keychain",
@@ -128,5 +129,20 @@
     "blend": "/singapore-products/peranakan-coaster/peranakan-coaster.blend",
     "preview": "/singapore-products/peranakan-coaster/peranakan-coaster.png",
     "viewer": "/singapore-products/peranakan-coaster/viewer.html"
+  },
+  {
+    "id": "hawker-bakes-clicker",
+    "title": "Hawker Bakes Keycap Clicker",
+    "description": "A slice missing from the pandan chiffon reveals its green crumb. Swap the cake for a fluted egg tart with a golden custard centre. Both press onto the same kopitiam saucer switch.",
+    "dimensions": "40.4 × 36 mm base · 31.2 mm chiffon · 31.6 mm tart across",
+    "status": "Printable prototype",
+    "updated": true,
+    "printNote": "The colour 3MF includes a saucer and two caps. Already have the Kopitiam Clicker? Print just a cap and press it onto your existing full-height MX-style switch. Match pandan green, golden brown, custard yellow and jade to your AMS Lite spools. Test the stem fit before use.",
+    "stlLabel": "Print set · STL",
+    "stl": "/singapore-products/hawker-bakes-clicker/hawker-bakes-clicker.stl",
+    "blend": "/singapore-products/hawker-bakes-clicker/hawker-bakes-clicker.blend",
+    "preview": "/singapore-products/hawker-bakes-clicker/hawker-bakes-clicker.png",
+    "threemf": "/singapore-products/hawker-bakes-clicker/hawker-bakes-clicker.3mf",
+    "viewer": "/singapore-products/hawker-bakes-clicker/viewer.html"
   }
 ]

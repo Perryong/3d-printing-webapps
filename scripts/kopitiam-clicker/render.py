@@ -4,11 +4,12 @@ import base64
 import gzip
 import json
 import re
+import sys
 from pathlib import Path
 import bpy
 from mathutils import Vector
 
-slug = "kopitiam-keycap-clicker"
+slug = sys.argv[sys.argv.index("--") + 1] if "--" in sys.argv else "kopitiam-keycap-clicker"
 folder = Path(__file__).resolve().parents[2] / "public/singapore-products" / slug
 html = (folder / "viewer.html").read_text()
 payload = json.loads(

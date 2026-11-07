@@ -2,7 +2,7 @@
   "id": "kopitiam-keycap-clicker",
   "title": "Kopitiam Keycap Clicker",
   "description": "Press a red-dot pau or a green-striped kopi cup. Both caps fit the same jade saucer keychain, inspired by a Singapore kopitiam breakfast.",
-  "printNote": "Add one full-height MX-style clicky switch and a metal split ring. Print the base and your choice of cap at 100% scale. Clip the switch into the square opening, press the cap onto its stem, then attach the ring. Switch fit and keyring strength need a test print.",
+  "printNote": "Open the colour 3MF as a project in Bambu Studio. Under Objects → Red-dot pau, Pau dough uses filament 1 (cream) and Red dot uses filament 2 (red). Match the colours to your AMS Lite spools. Print the saucer and either cap, then fit one full-height MX-style clicky switch and a split ring. Test the fit before use.",
   "dimensions": "40.4 × 36 mm base · approx. 34 mm tall with pau",
   "status": "Printable prototype",
   "updated": true,
@@ -11,5 +11,6 @@
   "blend": "/singapore-products/kopitiam-keycap-clicker/kopitiam-keycap-clicker.blend",
   "preview": "/singapore-products/kopitiam-keycap-clicker/kopitiam-keycap-clicker.png",
   "viewer": "/singapore-products/kopitiam-keycap-clicker/viewer.html",
-  "stlParts": "/singapore-products/kopitiam-keycap-clicker/clicker-stl-parts.zip"
+  "stlParts": "/singapore-products/kopitiam-keycap-clicker/clicker-stl-parts.zip",
+  "threemf": "/singapore-products/kopitiam-keycap-clicker/kopitiam-keycap-clicker.3mf"
 }

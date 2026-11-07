@@ -139,7 +139,7 @@ export default function SingaporeGallery() {
           <div>
             <h3>Print on your Bambu Lab A1 Combo</h3>
             <p>Open the STL in millimetres at 100% scale. Start with PLA, a 0.4 mm nozzle and 0.2 mm layers. Preview before printing.</p>
-            <p>For a colour print, use the Blender file as a guide and choose your colours in Bambu Studio.</p>
+            <p>For products with a colour 3MF, open it in Bambu Studio and match the filaments to your spools.</p>
             <p>These prototypes are for adults. Make a test print to check the fit and keyring strength.</p>
           </div>
         </section>
