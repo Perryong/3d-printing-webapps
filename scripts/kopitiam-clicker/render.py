@@ -85,7 +85,8 @@ bpy.ops.mesh.primitive_plane_add(size=2000, location=(0, 0, -0.05))
 bpy.context.object.data.materials.append(material("Warm paper", (0.87, 0.83, 0.75)))
 scene.world = bpy.data.worlds.new("Soft studio")
 scene.world.color = (0.34, 0.34, 0.34)
-target = Vector((17, 0, 13))
+single_cap = len(objects) == 2
+target = Vector((0, 0, 17) if single_cap else (17, 0, 13))
 for loc, energy, size in [
     ((-35, -70, 105), 165000, 85),
     ((75, 45, 95), 160000, 65),
@@ -101,7 +102,7 @@ bpy.ops.object.camera_add(location=(52, -140, 90))
 camera = bpy.context.object
 camera.rotation_euler = (target - camera.location).to_track_quat("-Z", "Y").to_euler()
 camera.data.type = "ORTHO"
-camera.data.ortho_scale = 99
+camera.data.ortho_scale = 75 if single_cap else 99
 scene.camera = camera
 scene.render.engine = "CYCLES"
 scene.cycles.samples = 32

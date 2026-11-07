@@ -79,7 +79,7 @@ def write_model(path, objects, palette):
     plate = ET.SubElement(config, "plate")
     ET.SubElement(plate, "metadata", key="plater_id", value="1")
     next_id = 1
-    for (name, parts), (x, y) in zip(objects.items(), [(105, 105), (155, 105), (105, 154)], strict=True):
+    for (name, parts), (x, y) in zip(objects.items(), [(105, 105), (155, 105), (105, 154)][:len(objects)], strict=True):
         assembly_id = next_id + len(parts)
         settings = ET.SubElement(config, "object", id=str(assembly_id))
         ET.SubElement(settings, "metadata", key="name", value=name)
@@ -139,7 +139,7 @@ def export_gallery_set(folder, slug, title, objects, originals):
     payload, solids = [], []
     bed_xy = [(0, 0), (42, 0), (0, 38)]
     display_xyz = [(0, 0, 0), (0, 0, 17.1), (40, 0, 0)]
-    for (name, parts), (x, y), display in zip(objects.items(), bed_xy, display_xyz, strict=True):
+    for (name, parts), (x, y), display in zip(objects.items(), bed_xy[:len(objects)], display_xyz[:len(objects)], strict=True):
         solids.append(originals[name].translate((x, y, 0)))
         tagged = [s.as_original() for _, _, s in parts]
         data = mf.Manifold.batch_boolean(tagged, mf.OpType.Add).to_mesh()
@@ -154,7 +154,7 @@ def export_gallery_set(folder, slug, title, objects, originals):
                                 triangles=inverse.reshape(-1, 3).tolist(),
                                 color=[int(colour[i:i+2], 16) / 255 for i in (1, 3, 5)]))
     bed = mf.Manifold.compose(solids)
-    assert len(bed.decompose()) == 3
+    assert len(bed.decompose()) == len(objects)
     (folder / (slug + ".stl")).write_bytes(stl(bed))
     write_viewer(folder, slug, title, payload)
 

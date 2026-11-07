@@ -1,0 +1,15 @@
+{
+  "id": "iced-gem-biscuit-clicker",
+  "title": "Iced Gem Biscuit Keycap Clicker",
+  "description": "A biscuit-tin favourite on a keyring. A twist of pink icing sits on a scalloped golden biscuit, with ten little dimples around the edge.",
+  "dimensions": "40.4 × 36 mm saucer · approx. 32 mm biscuit · 21.2 mm cap height",
+  "status": "Printable prototype",
+  "updated": true,
+  "printNote": "Open the 3MF as a project in Bambu Studio. Match filaments 1–3 to jade, biscuit gold and icing pink on your AMS Lite. To change the icing colour, select Piped icing under the biscuit in the Objects list. Already have the clicker saucer and full-height MX-style switch? Print just the cap. For a new set, add a switch and a split ring.",
+  "stlLabel": "Print set · STL",
+  "stl": "/singapore-products/iced-gem-biscuit-clicker/iced-gem-biscuit-clicker.stl",
+  "blend": "/singapore-products/iced-gem-biscuit-clicker/iced-gem-biscuit-clicker.blend",
+  "preview": "/singapore-products/iced-gem-biscuit-clicker/iced-gem-biscuit-clicker.png",
+  "threemf": "/singapore-products/iced-gem-biscuit-clicker/iced-gem-biscuit-clicker.3mf",
+  "viewer": "/singapore-products/iced-gem-biscuit-clicker/viewer.html"
+}

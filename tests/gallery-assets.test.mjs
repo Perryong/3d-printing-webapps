@@ -3,18 +3,18 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-test('gallery ships nine current designs with usable local previews and nine valid STL downloads', () => {
+test('gallery ships ten current designs with usable local previews and ten valid STL downloads', () => {
   const manifest = resolve('public/singapore-products/catalog.json');
   assert.ok(existsSync(manifest), 'Gallery catalog is not generated yet');
   const products = JSON.parse(readFileSync(manifest, 'utf8'));
-  assert.equal(products.length, 9);
-  assert.equal(new Set(products.map(p => p.id)).size, 9);
-  assert.deepEqual(products.map(p => p.id), ['wafer-coin-collector', 'kopitiam-keycap-clicker', 'tutu-keychain', 'chope-marker', 'hdb-pencil-pot', 'dragon-playground-watch-holder', 'peranakan-coaster', 'hawker-bakes-clicker', 'kaya-toast-egg-clicker']);
+  assert.equal(products.length, 10);
+  assert.equal(new Set(products.map(p => p.id)).size, 10);
+  assert.deepEqual(products.map(p => p.id), ['wafer-coin-collector', 'kopitiam-keycap-clicker', 'tutu-keychain', 'chope-marker', 'hdb-pencil-pot', 'dragon-playground-watch-holder', 'peranakan-coaster', 'hawker-bakes-clicker', 'kaya-toast-egg-clicker', 'iced-gem-biscuit-clicker']);
   assert.ok(products.some(p => p.id === 'tutu-keychain'));
   assert.ok(!products.some(p => /dragon-cable-rest|kopi-clip-cup|lapis-stack|lapis-bloom|tutu-touch/.test(p.id)));
-  for (const clicker of [products[1], products[7], products[8]]) assert.ok(clicker.threemf?.endsWith('.3mf'));
+  for (const clicker of [products[1], products[7], products[8], products[9]]) assert.ok(clicker.threemf?.endsWith('.3mf'));
   const prints = products.filter(p => p.stl);
-  assert.equal(prints.length, 9);
+  assert.equal(prints.length, 10);
   for (const product of products) {
     for (const asset of [product.viewer, product.preview, product.blend, product.stl, product.stlParts, product.threemf].filter(Boolean)) {
       assert.ok(asset.startsWith('/singapore-products/'), asset);
