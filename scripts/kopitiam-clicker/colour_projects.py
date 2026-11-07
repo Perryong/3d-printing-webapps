@@ -70,7 +70,7 @@ def make_sets():
     return kopitiam, bakes
 
 
-def write_model(path, objects, palette):
+def write_model(path, objects, palette, supported_object=None):
     # Input assembly in shared part coordinates. Studio converts this to its native project format.
     model = ET.Element("model", unit="millimeter", xmlns="http://schemas.microsoft.com/3dmanufacturing/core/2015/02")
     resources = ET.SubElement(model, "resources")
@@ -84,6 +84,10 @@ def write_model(path, objects, palette):
         settings = ET.SubElement(config, "object", id=str(assembly_id))
         ET.SubElement(settings, "metadata", key="name", value=name)
         ET.SubElement(settings, "metadata", key="extruder", value=str(palette.index(parts[0][1]) + 1))
+        if name == supported_object:
+            for key, value in [("enable_support", "1"), ("support_type", "tree(auto)"),
+                               ("support_on_build_plate_only", "1")]:
+                ET.SubElement(settings, "metadata", key=key, value=value)
         for label, colour, solid in parts:
             obj = ET.SubElement(resources, "object", id=str(next_id), type="model", name=label)
             mesh = ET.SubElement(obj, "mesh")
@@ -115,10 +119,10 @@ def write_model(path, objects, palette):
         z.writestr("Metadata/model_settings.config", ET.tostring(config))
 
 
-def export_project(folder, slug, objects, palette):
+def export_project(folder, slug, objects, palette, *, supported_object=None):
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
-        write_model(tmp / "parts.3mf", objects, palette)
+        write_model(tmp / "parts.3mf", objects, palette, supported_object)
         machine = preset("machine", "Bambu Lab A1 0.4 nozzle")
         process = preset("process", "0.20mm Standard @BBL A1")
         process.update(curr_bed_type="Textured PEI Plate", wall_loops="3", wipe_tower_x=["38"], wipe_tower_y=["155"])

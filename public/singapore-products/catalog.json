@@ -174,5 +174,20 @@
     "preview": "/singapore-products/iced-gem-biscuit-clicker/iced-gem-biscuit-clicker.png",
     "threemf": "/singapore-products/iced-gem-biscuit-clicker/iced-gem-biscuit-clicker.3mf",
     "viewer": "/singapore-products/iced-gem-biscuit-clicker/viewer.html"
+  },
+  {
+    "id": "curry-puff-clicker",
+    "title": "Curry Puff Keycap Clicker",
+    "description": "A golden crescent with curved pastry layers and a row of folded crimps along its toasted edge. Press the puff on its jade saucer for a hawker snack that clicks.",
+    "dimensions": "40.4 × 36 mm saucer · 39.7 mm puff width · 23.3 mm cap height",
+    "status": "Printable prototype",
+    "updated": true,
+    "printNote": "Open the 3MF as a project in Bambu Studio. Match filaments 1–3 to jade, pastry gold and toasted brown on your AMS Lite. The crimped seam has its own colour assignment. Tree supports are enabled for the cap. Remove them and clear the stem socket before assembly. If you already have the saucer and full-height MX-style switch, print just the cap. For a new set, add a switch and a split ring.",
+    "stlLabel": "Print set · STL",
+    "stl": "/singapore-products/curry-puff-clicker/curry-puff-clicker.stl",
+    "blend": "/singapore-products/curry-puff-clicker/curry-puff-clicker.blend",
+    "preview": "/singapore-products/curry-puff-clicker/curry-puff-clicker.png",
+    "threemf": "/singapore-products/curry-puff-clicker/curry-puff-clicker.3mf",
+    "viewer": "/singapore-products/curry-puff-clicker/viewer.html"
   }
 ]
