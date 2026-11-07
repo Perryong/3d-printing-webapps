@@ -204,5 +204,20 @@
     "preview": "/singapore-products/pineapple-tart-clicker/pineapple-tart-clicker.png",
     "threemf": "/singapore-products/pineapple-tart-clicker/pineapple-tart-clicker.3mf",
     "viewer": "/singapore-products/pineapple-tart-clicker/viewer.html"
+  },
+  {
+    "id": "ang-ku-kueh-clicker",
+    "title": "Ang Ku Kueh Keycap Clicker",
+    "description": "An oval red tortoise cake on a green banana leaf. Three hexagonal shell plates sit inside an oval border, raised from the curved top like the impression of a kueh mould.",
+    "dimensions": "40.4 × 36 mm saucer · approx. 40 mm cap width · 18 mm cap height",
+    "status": "Printable prototype",
+    "updated": true,
+    "printNote": "Open the 3MF as a project in Bambu Studio. Match filaments 1–4 to jade for the saucer, green for the leaf, deep red for the kueh and scarlet for the raised shell pattern. You can use the same red for the cake and stamp. If you already have the saucer and full-height MX-style switch, print just the cap. For a new set, add a switch and a split ring.",
+    "stlLabel": "Print set · STL",
+    "stl": "/singapore-products/ang-ku-kueh-clicker/ang-ku-kueh-clicker.stl",
+    "blend": "/singapore-products/ang-ku-kueh-clicker/ang-ku-kueh-clicker.blend",
+    "preview": "/singapore-products/ang-ku-kueh-clicker/ang-ku-kueh-clicker.png",
+    "threemf": "/singapore-products/ang-ku-kueh-clicker/ang-ku-kueh-clicker.3mf",
+    "viewer": "/singapore-products/ang-ku-kueh-clicker/viewer.html"
   }
 ]

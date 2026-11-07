@@ -4,7 +4,7 @@ from pathlib import Path
 source = Path(sys.argv[1]).resolve()
 target = Path(__file__).resolve().parents[1] / 'public' / 'singapore-products'
 target.mkdir(parents=True, exist_ok=True)
-order = ['wafer-coin-collector', 'kopitiam-keycap-clicker', 'tutu-keychain', 'chope-marker', 'hdb-pencil-pot', 'dragon-playground-watch-holder', 'peranakan-coaster', 'hawker-bakes-clicker', 'kaya-toast-egg-clicker', 'iced-gem-biscuit-clicker', 'curry-puff-clicker', 'pineapple-tart-clicker']
+order = ['wafer-coin-collector', 'kopitiam-keycap-clicker', 'tutu-keychain', 'chope-marker', 'hdb-pencil-pot', 'dragon-playground-watch-holder', 'peranakan-coaster', 'hawker-bakes-clicker', 'kaya-toast-egg-clicker', 'iced-gem-biscuit-clicker', 'curry-puff-clicker', 'pineapple-tart-clicker', 'ang-ku-kueh-clicker']
 copy = {
  'tutu-keychain': ('Tutu Keychain', 'A tiny scalloped kueh on its green leaf, now with a reinforced eyelet to carry a little Singapore everywhere.', 'Flat-back print · green to white at 3 mm. Add a metal keyring; strength and fit untested.'),
  'chope-marker': ('CHOPE Desk Marker', 'The familiar tissue packet, made into a playful desk marker inspired by Singapore’s seat-reserving custom.', 'For separate colours, open the 3MF in Bambu Studio and assign filaments to Packet body, CHOPE lettering and Tissue in the Objects list. For the STL parts ZIP, import all three files together as one object with multiple parts to keep them aligned.'),
@@ -17,7 +17,7 @@ styles = '''<style>:root{--font-size-base:12px;--foreground:#253b35;--muted-fore
 </style>'''
 products = {p['id']: p for p in json.loads((source / 'gallery-assets.json').read_text())}
 clickers = {}
-for filename in ('product.json', 'hawker-bakes.json', 'breakfast.json', 'iced-gem.json', 'curry-puff.json', 'pineapple-tart.json'):
+for filename in ('product.json', 'hawker-bakes.json', 'breakfast.json', 'iced-gem.json', 'curry-puff.json', 'pineapple-tart.json', 'ang-ku-kueh.json'):
     clicker = json.loads((Path(__file__).parent / 'kopitiam-clicker' / filename).read_text())
     clickers[clicker['id']] = clicker
 assert set(order) - clickers.keys() <= products.keys(), 'Missing gallery exports'
