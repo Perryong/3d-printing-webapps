@@ -135,13 +135,12 @@ def export_project(folder, slug, objects, palette):
         (folder / (slug + ".3mf")).write_bytes((tmp / "project.3mf").read_bytes())
 
 
-def export_bakes(folder, slug, objects):
+def export_gallery_set(folder, slug, title, objects, originals):
     payload, solids = [], []
     bed_xy = [(0, 0), (42, 0), (0, 38)]
     display_xyz = [(0, 0, 0), (0, 0, 17.1), (40, 0, 0)]
     for (name, parts), (x, y), display in zip(objects.items(), bed_xy, display_xyz, strict=True):
-        solid = mf.Manifold.batch_boolean([s for _, _, s in parts], mf.OpType.Add)
-        solids.append((chiffon() if name == "Pandan chiffon" else solid).translate((x, y, 0)))
+        solids.append(originals[name].translate((x, y, 0)))
         tagged = [s.as_original() for _, _, s in parts]
         data = mf.Manifold.batch_boolean(tagged, mf.OpType.Add).to_mesh()
         for (_, colour, _), source in zip(parts, tagged, strict=True):
@@ -157,7 +156,7 @@ def export_bakes(folder, slug, objects):
     bed = mf.Manifold.compose(solids)
     assert len(bed.decompose()) == 3
     (folder / (slug + ".stl")).write_bytes(stl(bed))
-    write_viewer(folder, slug, "Hawker Bakes Keycap Clicker", payload)
+    write_viewer(folder, slug, title, payload)
 
 
 if __name__ == "__main__":
@@ -169,5 +168,7 @@ if __name__ == "__main__":
         folder = GALLERY / slug
         folder.mkdir(exist_ok=True)
         if slug == "hawker-bakes-clicker":
-            export_bakes(folder, slug, objects)
+            shell, filling = egg_tart()
+            originals = {"Saucer": saucer(), "Pandan chiffon": chiffon(), "Egg tart": shell + filling}
+            export_gallery_set(folder, slug, "Hawker Bakes Keycap Clicker", objects, originals)
         export_project(folder, slug, objects, palette)

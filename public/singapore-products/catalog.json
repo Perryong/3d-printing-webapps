@@ -144,5 +144,20 @@
     "preview": "/singapore-products/hawker-bakes-clicker/hawker-bakes-clicker.png",
     "threemf": "/singapore-products/hawker-bakes-clicker/hawker-bakes-clicker.3mf",
     "viewer": "/singapore-products/hawker-bakes-clicker/viewer.html"
+  },
+  {
+    "id": "kaya-toast-egg-clicker",
+    "title": "Kaya Toast & Soft-Boiled Egg Keycap Clicker",
+    "description": "A kopitiam breakfast in miniature. Press the grill-marked toast with pandan kaya and butter, or swap in a soft-boiled egg with a golden yolk and a splash of soy sauce.",
+    "dimensions": "40.4 × 36 mm saucer · 33.8 mm egg dish across",
+    "status": "Printable prototype",
+    "updated": true,
+    "printNote": "Open the colour 3MF as a project in Bambu Studio. Match filaments 1–4 to green, brown, cream and yellow on your AMS Lite. If you already have the saucer and full-height MX-style switch from No. 2 or No. 8, select just the caps to print. For a new set, add a switch and a split ring. Test the stem fit after printing.",
+    "stlLabel": "Print set · STL",
+    "stl": "/singapore-products/kaya-toast-egg-clicker/kaya-toast-egg-clicker.stl",
+    "blend": "/singapore-products/kaya-toast-egg-clicker/kaya-toast-egg-clicker.blend",
+    "preview": "/singapore-products/kaya-toast-egg-clicker/kaya-toast-egg-clicker.png",
+    "threemf": "/singapore-products/kaya-toast-egg-clicker/kaya-toast-egg-clicker.3mf",
+    "viewer": "/singapore-products/kaya-toast-egg-clicker/viewer.html"
   }
 ]
